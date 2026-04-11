@@ -1,5 +1,6 @@
 {
   "name": "fieldflow-monorepo",
+  "description": "The ultimate keyboard management and form flow solution for React Native.",
   "private": true,
   "workspaces": [
     "packages/*",

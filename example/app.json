@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "keyboard-test-app",
-    "slug": "keyboard-test-app",
+    "name": "FieldFlow Showcase",
+    "slug": "fieldflow-showcase",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "keyboardtestapp",
+    "scheme": "fieldflow",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
