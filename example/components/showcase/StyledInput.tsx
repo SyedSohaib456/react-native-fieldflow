@@ -5,7 +5,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import React, { forwardRef, useState } from 'react';
 import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 
-import { FieldInput, type FieldInputProps } from '@/components/keyboard';
+import { FieldInput, type FieldInputProps } from 'react-native-fieldflow';
 import {
   ShowcaseColors as C,
   ShowcaseRadius,

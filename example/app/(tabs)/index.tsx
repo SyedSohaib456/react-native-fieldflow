@@ -21,7 +21,7 @@ import {
   FieldForm,
   useKeyboardState,
   type FieldFormHandle,
-} from '@/components/keyboard';
+} from 'react-native-fieldflow';
 import {
   ActionButton,
   FeatureCard,
