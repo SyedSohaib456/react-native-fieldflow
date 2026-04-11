@@ -12,7 +12,8 @@
     "ios": "bun run --filter fieldflow-showcase ios",
     "web": "bun run --filter fieldflow-showcase web",
     "lint": "turbo run lint",
-    "build": "turbo run build"
+    "build": "turbo run build",
+    "release": "cd packages/react-native-fieldflow && npm publish"
   },
   "devDependencies": {
     "turbo": "latest"
