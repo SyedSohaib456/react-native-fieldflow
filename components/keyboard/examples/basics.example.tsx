@@ -50,7 +50,7 @@ export function ExampleMinimalKeyboardForm() {
 
 /** 2) Imperative ref — dismiss keyboard or scroll a raw TextInput into view. */
 export function ExampleKeyboardFormRef() {
-  const formRef = useRef<KeyboardFormHandle>(null);
+  const formRef = useRef<FieldFormHandle>(null);
   const orphanRef = useRef<TextInput>(null);
 
   return (
