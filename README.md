@@ -10,8 +10,6 @@
 <br/>
 
 [![npm](https://img.shields.io/npm/v/react-native-fieldflow?color=6366f1&style=flat-square)](https://www.npmjs.com/package/react-native-fieldflow)
-[![downloads](https://img.shields.io/npm/dm/react-native-fieldflow?color=6366f1&style=flat-square)](https://www.npmjs.com/package/react-native-fieldflow)
-[![license](https://img.shields.io/npm/l/react-native-fieldflow?color=f59e0b&style=flat-square)](LICENSE)
 [![RN](https://img.shields.io/badge/React%20Native-%3E%3D0.68-61dafb?style=flat-square&logo=react)](https://reactnative.dev)
 [![Expo](https://img.shields.io/badge/Expo-compatible-000020?style=flat-square&logo=expo)](https://expo.dev)
 
