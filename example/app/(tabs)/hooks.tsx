@@ -21,7 +21,7 @@ import {
   useKeyboardHeight,
   useKeyboardState,
   useKeyboardVisible,
-} from 'react-native-fieldflow';
+} from '../../../packages/react-native-fieldflow/src';
 import {
   ActionButton,
   FeatureCard,

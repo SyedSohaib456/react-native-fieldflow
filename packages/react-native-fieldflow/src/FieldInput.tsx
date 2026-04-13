@@ -48,20 +48,21 @@ export const FieldInput = forwardRef<TextInput, FieldInputProps>((props, forward
       } else if (isLast()) {
         onFormSubmit?.();
         ctx.submitForm();
-      } else {
+      } else if (ctx.chainEnabled) {
         ctx.focusNext(idx);
       }
     },
     [ctx, chainIndex, nextRef, isLast, onSubmitEditing, onFormSubmit],
   );
 
-  const resolvedReturnKeyType = returnKeyType ?? (isLast() ? 'done' : 'next');
+  const resolvedReturnKeyType =
+    returnKeyType ?? (ctx?.autoReturnKeyType ? (isLast() ? 'done' : 'next') : undefined);
   const blurOnSubmit = blurOnSubmitProp ?? false;
 
   const handleFocus = useCallback(
     (e: any) => {
       rest.onFocus?.(e);
-      if (ctx && internalRef.current) {
+      if (ctx && internalRef.current && ctx.autoScroll) {
         ctx.scrollInputIntoView(internalRef.current);
       }
     },

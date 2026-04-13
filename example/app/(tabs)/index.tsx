@@ -5,23 +5,17 @@
  * quick demo form, API list, and navigation to detail screens.
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useRouter } from 'expo-router';
 import React, { useCallback, useRef, useState } from 'react';
 import {
   Alert,
   Platform,
   StyleSheet,
-  Switch,
   Text,
-  View,
+  View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 
-import {
-  FieldForm,
-  useKeyboardState,
-  type FieldFormHandle,
-} from 'react-native-fieldflow';
 import {
   ActionButton,
   FeatureCard,
@@ -34,6 +28,11 @@ import {
   ShowcaseRadius,
   ShowcaseSpacing,
 } from '@/constants/showcase-theme';
+import {
+  FieldForm,
+  useKeyboardState,
+  type FieldFormHandle,
+} from '../../../packages/react-native-fieldflow/src';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -48,7 +47,9 @@ export default function HomeScreen() {
   // ── Feature toggles ────────────────────────────────
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [avoidEnabled, setAvoidEnabled] = useState(true);
+  const [autoScroll, setAutoScroll] = useState(true);
   const [chainEnabled, setChainEnabled] = useState(true);
+  const [dismissOnTap, setDismissOnTap] = useState(true);
 
   const handleSubmit = useCallback(() => {
     setSubmitted(true);
@@ -63,6 +64,9 @@ export default function HomeScreen() {
         onSubmit={handleSubmit}
         scrollable={scrollEnabled}
         avoidKeyboard={avoidEnabled}
+        autoScroll={autoScroll}
+        chainEnabled={chainEnabled}
+        dismissKeyboardOnTap={dismissOnTap}
         extraScrollPadding={100}
         keyboardVerticalOffset={0}
         scrollViewProps={{
@@ -116,6 +120,20 @@ export default function HomeScreen() {
               description="Next / Done auto-chains field focus"
               toggleValue={chainEnabled}
               onToggle={setChainEnabled}
+            />
+            <FeatureCard
+              icon="color-filter-outline"
+              title="Auto Scroll"
+              description="Scroll to focused field"
+              toggleValue={autoScroll}
+              onToggle={setAutoScroll}
+            />
+            <FeatureCard
+              icon="hand-right-outline"
+              title="Tap to Dismiss"
+              description="Tap empty area to close"
+              toggleValue={dismissOnTap}
+              onToggle={setDismissOnTap}
             />
           </View>
         </View>

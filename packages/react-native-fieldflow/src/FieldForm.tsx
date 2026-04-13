@@ -17,6 +17,7 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
+  TouchableWithoutFeedback,
   View,
   type ScrollViewProps,
   type TextInput,
@@ -33,7 +34,7 @@ import type {
 const defaultExtraScrollPadding = 10;
 
 function resolveKeyboardVerticalOffset(
-  value: KeyboardFormProps['keyboardVerticalOffset'],
+  value: FieldFormProps['keyboardVerticalOffset'],
 ): number {
   if (typeof value === 'function') {
     return value(Platform.OS as KeyboardPlatformOs);
@@ -71,6 +72,10 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
       androidDismissKeyboardOnBackPress = true,
       dismissKeyboardOnSubmit = true,
       dismissKeyboardOnFocusPastLast = true,
+      autoScroll = true,
+      chainEnabled = true,
+      autoReturnKeyType = true,
+      dismissKeyboardOnTap = false,
       scrollViewRef: scrollViewRefProp,
     } = props;
 
@@ -223,8 +228,21 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
         scrollInputIntoView,
         submitForm,
         count,
+        autoScroll,
+        chainEnabled,
+        autoReturnKeyType,
       }),
-      [register, unregister, focusNext, scrollInputIntoView, submitForm, count],
+      [
+        register,
+        unregister,
+        focusNext,
+        scrollInputIntoView,
+        submitForm,
+        count,
+        autoScroll,
+        chainEnabled,
+        autoReturnKeyType,
+      ],
     );
 
     const {
@@ -274,6 +292,14 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
         ...scrollProps,
         ref: setMergedScrollRef,
       } as ScrollViewProps & { ref: typeof setMergedScrollRef });
+
+      if (dismissKeyboardOnTap) {
+        content = (
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+            {content}
+          </TouchableWithoutFeedback>
+        );
+      }
     }
 
     // No outer wrapper needed with internal spacer approach
