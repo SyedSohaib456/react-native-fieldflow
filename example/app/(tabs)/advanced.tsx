@@ -17,9 +17,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   FieldForm,
   FieldInput,
-  type FieldFormHandle,
+  dismissKeyboard,
   useKeyboardState,
-} from 'react-native-fieldflow';
+  type FieldFormHandle,
+} from '../../../packages/react-native-fieldflow/src';
 import {
   ActionButton,
   FeatureCard,

@@ -11,6 +11,10 @@
     "lint": "expo lint"
   },
   "dependencies": {
+    "@babel/runtime": "^7.24.0",
+    "@expo/metro-runtime": "~6.1.2",
+    "expo-modules-core": "~2.2.0",
+    "invariant": "^2.2.4",
     "react-native-fieldflow": "workspace:*",
     "@expo/vector-icons": "^15.0.3",
     "@react-navigation/bottom-tabs": "^7.4.0",

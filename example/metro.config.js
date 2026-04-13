@@ -17,7 +17,7 @@ config.resolver.nodeModulesPaths = [
   path.resolve(workspaceRoot, 'node_modules'),
 ];
 
-// 3. Force Metro to resolve the same version of dependencies from the workspace root
-config.resolver.disableHierarchicalLookup = true;
+// 3. Let Metro resolve hierarchically (important for bun node_modules cache)
+config.resolver.disableHierarchicalLookup = false;
 
 module.exports = config;

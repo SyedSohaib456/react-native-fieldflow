@@ -18,6 +18,10 @@ export interface FieldFormContextValue {
   scrollInputIntoView: (input: TextInput | null, padding?: number) => void;
   submitForm: () => void;
   count: () => number;
+  /** @internal settings from FieldForm */
+  autoScroll: boolean;
+  chainEnabled: boolean;
+  autoReturnKeyType: boolean;
 }
 
 /** Imperative API when `KeyboardForm` is used with `ref`. */
@@ -45,6 +49,15 @@ export interface FieldFormProps {
   scrollable?: boolean;
   /** Wrap in `KeyboardAvoidingView`. @default true */
   avoidKeyboard?: boolean;
+
+  /** Automatically scroll to focused inputs. @default true */
+  autoScroll?: boolean;
+  /** Automatically focus the next field on SubmitEditing (Enter/Next). @default true */
+  chainEnabled?: boolean;
+  /** Automatically switch return key between "next" and "done". @default true */
+  autoReturnKeyType?: boolean;
+  /** Tapping outside any input will dismiss the keyboard. @default false */
+  dismissKeyboardOnTap?: boolean;
 
   /**
    * Replace the default `ScrollView` (e.g. `KeyboardAwareScrollView`).

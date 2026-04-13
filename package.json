@@ -16,6 +16,10 @@
     "release": "cd packages/react-native-fieldflow && npm publish"
   },
   "devDependencies": {
-    "turbo": "latest"
+    "turbo": "latest",
+    "whatwg-fetch": "^3.6.20",
+    "anser": "^1.4.9",
+    "stacktrace-parser": "^0.1.10",
+    "pretty-format": "^29.7.0"
   }
 }

@@ -20,7 +20,7 @@ import {
   FieldForm,
   type FieldFormHandle,
   useKeyboardState,
-} from 'react-native-fieldflow';
+} from '../../../packages/react-native-fieldflow/src';
 import {
   ActionButton,
   FeatureCard,
