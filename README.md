@@ -1,37 +1,42 @@
 <div align="center">
 
-<img src="media/logo.png" alt="FieldFlow Logo - React Native Keyboard Management" width="600" />
+<img src="media/logo.png" alt="react-native-fieldflow" width="360" />
 
 <br/>
 <br/>
 
-**The ultimate keyboard management and form flow solution for React Native.**
+**The keyboard form library React Native should have shipped with.**
 
 <br/>
 
 [![npm](https://img.shields.io/npm/v/react-native-fieldflow?color=6366f1&style=flat-square)](https://www.npmjs.com/package/react-native-fieldflow)
-[![downloads](https://img.shields.io/npm/dm/react-native-fieldflow?color=6366f1&style=flat-square)](https://www.npmjs.com/package/react-native-fieldflow)
-[![license](https://img.shields.io/npm/l/react-native-fieldflow?color=f59e0b&style=flat-square)](LICENSE)
 [![RN](https://img.shields.io/badge/React%20Native-%3E%3D0.68-61dafb?style=flat-square&logo=react)](https://reactnative.dev)
 [![Expo](https://img.shields.io/badge/Expo-compatible-000020?style=flat-square&logo=expo)](https://expo.dev)
 
 <br/>
 
+> **Zero refs &nbsp;·&nbsp; Zero platform switches &nbsp;·&nbsp; Zero boilerplate**
+
+<br/>
+
 <table>
 <tr>
-<td align="center" width="33%">
-<img src="media/avoidance.gif" width="200" /><br/>
-<sub><b>Smooth avoidance</b></sub><br/>
-<sub>Animated spacer, no layout jumps</sub>
+<td align="center" width="33%" style="padding:32px 20px">
+<div style="font-size:48px">⌨️</div>
+<br/>
+<b>Smooth avoidance</b><br/>
+<sub>Animated spacer — no layout jumps</sub>
 </td>
-<td align="center" width="33%">
-<img src="media/chaining.gif" width="200" /><br/>
-<sub><b>Auto focus chain</b></sub><br/>
-<sub>Next → Done, zero refs</sub>
+<td align="center" width="33%" style="padding:32px 20px">
+<div style="font-size:48px">⛓️</div>
+<br/>
+<b>Auto focus chain</b><br/>
+<sub>Next → Done — zero refs</sub>
 </td>
-<td align="center" width="33%">
-<img src="media/stability.gif" width="200" /><br/>
-<sub><b>Platform parity</b></sub><br/>
+<td align="center" width="33%" style="padding:32px 20px">
+<div style="font-size:48px">📱</div>
+<br/>
+<b>Platform parity</b><br/>
 <sub>Identical on iOS and Android</sub>
 </td>
 </tr>
@@ -49,7 +54,7 @@ You need `KeyboardAvoidingView`. You need different `behavior` props per platfor
 
 That's the minimum — on a simple login screen. Scale to 8 fields and this is 60 lines of boilerplate you write identically in every project.
 
-FieldFlow replaces all of it with two components.
+**FieldFlow** replaces all of it with two components.
 
 ---
 
@@ -94,16 +99,17 @@ That's a fully working, properly keyboard-avoiding, auto-chaining 5-field sign-u
 
 ## Before and after
 
-The same screen, the old way:
+#### ❌ Without FieldFlow — 5 fields, 40+ lines
 
 ```tsx
-// ❌ Every form you've ever written
+// Every ref declared by hand
 const nameRef    = useRef<TextInput>(null);
 const emailRef   = useRef<TextInput>(null);
 const phoneRef   = useRef<TextInput>(null);
 const passRef    = useRef<TextInput>(null);
 const confirmRef = useRef<TextInput>(null);
 
+// Platform behavior differs — you have to know this
 <KeyboardAvoidingView
   behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
   keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
@@ -113,6 +119,7 @@ const confirmRef = useRef<TextInput>(null);
     keyboardShouldPersistTaps="handled"
     contentContainerStyle={{ flexGrow: 1 }}
   >
+    {/* Every single field wired manually */}
     <TextInput ref={nameRef}    returnKeyType="next" blurOnSubmit={false} onSubmitEditing={() => emailRef.current?.focus()} />
     <TextInput ref={emailRef}   returnKeyType="next" blurOnSubmit={false} onSubmitEditing={() => phoneRef.current?.focus()} />
     <TextInput ref={phoneRef}   returnKeyType="next" blurOnSubmit={false} onSubmitEditing={() => passRef.current?.focus()} />
@@ -122,18 +129,21 @@ const confirmRef = useRef<TextInput>(null);
 </KeyboardAvoidingView>
 ```
 
-With FieldFlow:
+#### ✅ With FieldFlow — same result, 8 lines
 
 ```tsx
-// ✅ Every form from now on
+import { FieldForm, FieldInput } from 'react-native-fieldflow';
+
 <FieldForm onSubmit={handleSubmit}>
   <FieldInput placeholder="Full name" />
-  <FieldInput placeholder="Email"     keyboardType="email-address" autoCapitalize="none" />
-  <FieldInput placeholder="Phone"     keyboardType="phone-pad" />
-  <FieldInput placeholder="Password"  secureTextEntry />
-  <FieldInput placeholder="Confirm"   secureTextEntry />
+  <FieldInput placeholder="Email"    keyboardType="email-address" autoCapitalize="none" />
+  <FieldInput placeholder="Phone"    keyboardType="phone-pad" />
+  <FieldInput placeholder="Password" secureTextEntry />
+  <FieldInput placeholder="Confirm"  secureTextEntry />
 </FieldForm>
 ```
+
+> `returnKeyType`, `blurOnSubmit`, `onSubmitEditing`, `KeyboardAvoidingView`, `ScrollView` — all handled. Nothing to configure.
 
 ---
 
@@ -145,9 +155,9 @@ With FieldFlow:
 
 <br/>
 
-`FieldForm` subscribes to native keyboard frame events. As the keyboard animates in, an internal `Animated.View` spacer at the bottom of the scroll content grows to match — pushing content up in sync with the keyboard, with no layout recalculation and no white flash.
+**FieldFlow** subscribes to native keyboard frame events. As the keyboard animates in, an internal `Animated.View` spacer at the bottom of the scroll content grows to match — pushing content up in sync with the keyboard, with no layout recalculation and no white flash.
 
-At the same time, every `FieldInput` registers itself into an ordered focus chain. When you tap Next, FieldFlow calls `focus()` on the next ref and runs `scrollResponderScrollNativeHandleToKeyboard` to ensure the newly focused field is visible above the keyboard — even accounting for `extraScrollPadding` so it doesn't sit flush against it.
+At the same time, every `FieldInput` registers itself into an ordered focus chain. When you tap Next, **FieldFlow** calls `focus()` on the next ref and runs `scrollResponderScrollNativeHandleToKeyboard` to ensure the newly focused field is visible above the keyboard — even accounting for `extraScrollPadding` so it doesn't sit flush against it.
 
 Nothing about this requires native modules. It is entirely JS-side and works on Expo, bare RN, and the New Architecture.
 
@@ -209,16 +219,60 @@ function SubmitButton() {
 
 ## Comparison
 
-|  | `KeyboardAvoidingView` | `keyboard-aware-scroll-view` | **FieldFlow** |
-|--|--|--|--|
-| No layout jumps | ❌ | ⚠️ Sometimes | ✅ |
-| Identical iOS + Android | ❌ | ⚠️ | ✅ |
-| Auto Next / Done | ❌ Manual | ❌ Manual | ✅ |
-| Ref management | ❌ Manual | ❌ Manual | ✅ None |
-| Works with Expo | ✅ | ✅ | ✅ |
-| New Architecture | ✅ | ⚠️ | ✅ |
-| Native modules | None | None | None |
-
+<table>
+<thead>
+<tr>
+<th></th>
+<th align="center"><code>KeyboardAvoidingView</code></th>
+<th align="center"><code>keyboard-aware-scroll-view</code></th>
+<th align="center" style="background-color:#6366f1;color:#ffffff;padding:8px 20px">✦ &nbsp;FieldFlow</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>No layout jumps</td>
+<td align="left">❌</td>
+<td align="left"><span style="display:inline-flex;align-items:center;gap:5px">⚠️ <span>Sometimes</span></span></td>
+<td align="left">✅</td>
+</tr>
+<tr>
+<td>Identical iOS + Android</td>
+<td align="left">❌</td>
+<td align="left">⚠️</td>
+<td align="left">✅</td>
+</tr>
+<tr>
+<td>Auto Next / Done</td>
+<td align="left"><span style="display:inline-flex;align-items:center;gap:5px">❌ <span>Manual</span></span></td>
+<td align="left"><span style="display:inline-flex;align-items:center;gap:5px">❌ <span>Manual</span></span></td>
+<td align="left"><b><span style="display:inline-flex;align-items:center;gap:5px">✅ <span>Automatic</span></span></b></td>
+</tr>
+<tr>
+<td>Ref management</td>
+<td align="left"><span style="display:inline-flex;align-items:center;gap:5px">❌ <span>Manual</span></span></td>
+<td align="left"><span style="display:inline-flex;align-items:center;gap:5px">❌ <span>Manual</span></span></td>
+<td align="left"><b><span style="display:inline-flex;align-items:center;gap:5px">✅ <span>Zero</span></span></b></td>
+</tr>
+<tr>
+<td>Works with Expo</td>
+<td align="left">✅</td>
+<td align="left">✅</td>
+<td align="left">✅</td>
+</tr>
+<tr>
+<td>New Architecture (Fabric)</td>
+<td align="left">✅</td>
+<td align="left">⚠️</td>
+<td align="left">✅</td>
+</tr>
+<tr>
+<td>Native modules</td>
+<td align="left">None</td>
+<td align="left">None</td>
+<td align="left">None</td>
+</tr>
+</tbody>
+</table>
 ---
 
 ## Common questions
@@ -227,7 +281,7 @@ function SubmitButton() {
 <summary><b>Does it work with React Navigation?</b></summary>
 <br/>
 
-Yes. FieldFlow measures available window height rather than screen height, so it accounts for headers, tab bars, and any custom chrome automatically. No `keyboardVerticalOffset` guessing required.
+Yes. **FieldFlow** measures available window height rather than screen height, so it accounts for headers, tab bars, and any custom chrome automatically. No `keyboardVerticalOffset` guessing required.
 </details>
 
 <details>
@@ -272,7 +326,7 @@ const notesRef = useRef<TextInput>(null);
 <summary><b>Does it support the New Architecture (Fabric)?</b></summary>
 <br/>
 
-Yes. FieldFlow uses `Animated`, `Keyboard`, and standard event listeners — all of which are fully supported on both architectures.
+Yes. **FieldFlow** uses `Animated`, `Keyboard`, and standard event listeners — all of which are fully supported on both architectures.
 </details>
 
 ---
@@ -291,7 +345,7 @@ If you find an edge case — a device, a navigation setup, a keyboard type that 
 
 <div align="center">
 
-If FieldFlow saves you time, a star helps other developers find it.
+If **FieldFlow** saves you time, a star helps other developers find it.
 
 **[⭐ Star on GitHub](https://github.com/SyedSohaib456/react-native-fieldflow)**
 
