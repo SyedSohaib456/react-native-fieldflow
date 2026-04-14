@@ -169,12 +169,12 @@ export default function AdvancedScreen() {
             icon="play-outline"
             label="Start here"
             placeholder='Press "Next" on keyboard →'
-            nextRef={customTargetRef}
           />
           <StyledInput
             icon="play-skip-forward-outline"
             label="Skipped"
             placeholder="This field is skipped"
+            skip={true}
           />
           <View>
             <View style={styles.targetLabelRow}>

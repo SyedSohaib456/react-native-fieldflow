@@ -161,6 +161,9 @@ At the same time, every `FieldInput` registers itself into an ordered focus chai
 
 Nothing about this requires native modules. It is entirely JS-side and works on Expo, bare RN, and the New Architecture.
 
+### ⚡ 60fps Native Performance
+**FieldFlow** strictly requires [`react-native-reanimated`](https://docs.swmansion.com/react-native-reanimated/) as a peer dependency. By mandating Reanimated, the library delegates all keyboard layout tracking to a high-performance C++ worklet via `useAnimatedKeyboard()`. This completely bypasses the JavaScript bridge during animations, resulting in maximum UI thread performance (smooth 60fps) during heavy keyboard pan gestures that would otherwise stutter on the JS thread.
+
 ---
 
 ## API
@@ -170,9 +173,10 @@ Nothing about this requires native modules. It is entirely JS-side and works on 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `onSubmit` | `() => void` | — | Called when the last field is submitted |
-| `extraScrollPadding` | `number` | `100` | Space between the active field and the keyboard top edge |
+| `extraScrollPadding` | `number` | `40` | Space between the active field and the keyboard top edge |
 | `scrollable` | `boolean` | `true` | Wrap children in a managed ScrollView |
 | `avoidKeyboard` | `boolean` | `true` | Enable the animated keyboard spacer |
+| `submitOnLastFieldDone` | `boolean` | `false` | Submit the whole form / call `onSubmit` when "Done" is pressed on the final field |
 | `style` | `ViewStyle` | — | Container style |
 | `scrollViewProps` | `ScrollViewProps` | — | Forwarded to the internal ScrollView |
 | `onKeyboardShow` | `(height: number) => void` | — | Called when keyboard appears |
@@ -184,7 +188,7 @@ Accepts every `TextInput` prop, plus:
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `shouldIgnoreChain` | `boolean` | `false` | Exclude this field from the focus chain |
+| `skip` | `boolean` | `false` | Exclude this field from the auto-focus chain entirely |
 | `nextRef` | `RefObject<TextInput>` | — | Override: focus this ref instead of the auto-detected next field |
 | `onFormSubmit` | `() => void` | — | Override: called when this field is the last and Done is tapped |
 
@@ -304,7 +308,7 @@ const MyInput = forwardRef<TextInput, MyInputProps>((props, ref) => (
 <summary><b>Can I skip a field in the chain?</b></summary>
 <br/>
 
-Yes. Add `shouldIgnoreChain` to any `FieldInput` and the focus chain skips over it as if it doesn't exist. The field is still fully functional — it just doesn't participate in Next/Done handling.
+Yes. Add `skip={true}` to any `FieldInput` and the focus chain skips over it dynamically. The field is still fully functional — it just doesn't participate in Next/Done handling.
 </details>
 
 <details>

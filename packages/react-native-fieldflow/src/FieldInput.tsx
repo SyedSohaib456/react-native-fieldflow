@@ -1,6 +1,6 @@
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from 'react';
 import type { NativeSyntheticEvent, TextInputSubmitEditingEventData } from 'react-native';
-import { TextInput } from 'react-native';
+import { Keyboard, TextInput } from 'react-native';
 
 import { useFieldFlow } from './context';
 import type { FieldInputProps } from './types';
@@ -14,6 +14,7 @@ export const FieldInput = forwardRef<TextInput, FieldInputProps>((props, forward
     returnKeyType,
     registerWithForm = true,
     blurOnSubmit: blurOnSubmitProp,
+    skip,
     ...rest
   } = props;
 
@@ -26,14 +27,21 @@ export const FieldInput = forwardRef<TextInput, FieldInputProps>((props, forward
     if (!registerWithForm || !ctx) {
       return undefined;
     }
-    indexRef.current = ctx.register(internalRef);
+    indexRef.current = ctx.register(internalRef, skip);
     return () => ctx.unregister(internalRef);
-  }, [ctx, registerWithForm]);
+  }, [ctx, registerWithForm, skip]);
+
+  useEffect(() => {
+    if (registerWithForm && ctx) {
+      ctx.updateField(internalRef, skip);
+    }
+  }, [skip, ctx, registerWithForm]);
 
   const isLast = useCallback((): boolean => {
     if (!ctx) return true;
     const idx = chainIndex ?? indexRef.current;
-    return idx === ctx.count() - 1;
+    if (idx === -1) return true;
+    return !ctx.hasNext(idx);
   }, [ctx, chainIndex]);
 
   const handleSubmitEditing = useCallback(
@@ -46,8 +54,12 @@ export const FieldInput = forwardRef<TextInput, FieldInputProps>((props, forward
       if (nextRef?.current) {
         nextRef.current.focus();
       } else if (isLast()) {
-        onFormSubmit?.();
-        ctx.submitForm();
+        if (ctx.submitOnLastFieldDone) {
+          onFormSubmit?.();
+          ctx.submitForm();
+        } else {
+          Keyboard.dismiss();
+        }
       } else if (ctx.chainEnabled) {
         ctx.focusNext(idx);
       }

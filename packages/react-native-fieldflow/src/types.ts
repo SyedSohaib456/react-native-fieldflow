@@ -11,17 +11,20 @@ import type {
 
 /** Public context API for field registration and chained focus (used by `KeyboardInput`). */
 export interface FieldFormContextValue {
-  register: (inputRef: MutableRefObject<TextInput | null>) => number;
+  register: (inputRef: MutableRefObject<TextInput | null>, skip?: boolean) => number;
   unregister: (inputRef: MutableRefObject<TextInput | null>) => void;
+  updateField: (inputRef: MutableRefObject<TextInput | null>, skip?: boolean) => void;
   focusNext: (currentIndex: number) => void;
   /** Scrolls the form scroll view to ensure the given input is visible above the keyboard. */
   scrollInputIntoView: (input: TextInput | null, padding?: number) => void;
   submitForm: () => void;
   count: () => number;
+  hasNext: (currentIndex: number) => boolean;
   /** @internal settings from FieldForm */
   autoScroll: boolean;
   chainEnabled: boolean;
   autoReturnKeyType: boolean;
+  submitOnLastFieldDone: boolean;
 }
 
 /** Imperative API when `KeyboardForm` is used with `ref`. */
@@ -107,6 +110,8 @@ export interface FieldFormProps {
   dismissKeyboardOnSubmit?: boolean;
   /** When moving past the last field via `focusNext`. @default true */
   dismissKeyboardOnFocusPastLast?: boolean;
+  /** Submit the whole form / call `onSubmit` when the "Done" key is pressed on the last field. @default false */
+  submitOnLastFieldDone?: boolean;
 
   /**
    * Use your own ref for the scroll view instead of an internal one
@@ -124,6 +129,8 @@ export interface FieldInputProps extends TextInputProps {
   nextRef?: MutableRefObject<TextInput | null>;
   /** Set false to use `KeyboardInput` outside a `KeyboardForm`. @default true */
   registerWithForm?: boolean;
+  /** Skip this field during standard keyboard "Next" navigation. @default false */
+  skip?: boolean;
 }
 
 export type FieldInputSubmitEditingEvent =
