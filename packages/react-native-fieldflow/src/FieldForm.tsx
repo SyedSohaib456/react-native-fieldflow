@@ -10,6 +10,7 @@ import React, {
 import {
   Animated,
   BackHandler,
+  Dimensions,
   Easing,
   findNodeHandle,
   Keyboard,
@@ -30,17 +31,20 @@ let isReanimatedAvailable = false;
 
 try {
   const rea = require('react-native-reanimated');
-  // Handle different ESM/CJS export artifacts in React Native versions
-  AnimatedReanimatedView = rea.default?.View || rea.Animated?.View || rea.View;
   useAnimatedKeyboard = rea.useAnimatedKeyboard;
   useAnimatedStyle = rea.useAnimatedStyle;
-  if (AnimatedReanimatedView && useAnimatedKeyboard && useAnimatedStyle) {
+  const createAnimatedComponent = rea.createAnimatedComponent;
+  // createAnimatedComponent(View) is the canonical way to get an Animated View
+  // that actually drives Reanimated animated styles on the UI thread.
+  if (useAnimatedKeyboard && useAnimatedStyle && createAnimatedComponent) {
+    AnimatedReanimatedView = createAnimatedComponent(View);
     isReanimatedAvailable = true;
   }
 } catch (e) {
   // gracefully degrade to Animated.timing if not found
 }
 
+// ReanimatedSpacer — used only for the scroll content spacer (not the accessory)
 const ReanimatedSpacer = ({
   avoidKeyboard,
   offset,
@@ -50,17 +54,22 @@ const ReanimatedSpacer = ({
   offset: number;
   extraPad: number;
 }) => {
-  // We can safely call hooks here because this component is only rendered if isReanimatedAvailable = true
   const keyboard = useAnimatedKeyboard();
   const animatedStyle = useAnimatedStyle(() => {
     const kHeight = avoidKeyboard ? keyboard.height.value : 0;
-    const finalHeight = Math.max(kHeight + offset, 0);
+    const finalHeight = kHeight > 0 ? Math.max(kHeight + offset, 0) : 0;
     return { height: finalHeight + extraPad };
   }, [avoidKeyboard, offset, extraPad]);
-  
+
   const AnimatedView = AnimatedReanimatedView;
   return <AnimatedView style={animatedStyle} />;
 };
+
+// NOTE: ReanimatedAccessory has been intentionally removed.
+// The keyboard accessory view is now animated with a dedicated Animated.timing
+// effect (see inside FieldForm) that uses the keyboard event's exact duration
+// and curve — giving reliable, smooth animation on both platforms regardless
+// of whether Reanimated worklets are compiled.
 
 import { FieldFlowContext } from './context';
 import type {
@@ -85,318 +94,482 @@ function resolveKeyboardVerticalOffset(
 }
 
 export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref) => {
-    const {
-      children,
-      onSubmit,
-      scrollable = true,
-      avoidKeyboard = true,
-      ScrollViewComponent,
-      KeyboardAvoidingViewComponent,
-      scrollViewProps,
-      keyboardAvoidingViewProps,
-      extraScrollPadding = defaultExtraScrollPadding,
-      contentContainerStyle,
-      applyDefaultScrollContentFlexGrow = true,
-      keyboardShouldPersistTaps = 'handled',
-      keyboardDismissMode = 'interactive',
-      showsVerticalScrollIndicator = false,
-      iosKeyboardAvoidingBehavior = 'padding',
-      androidKeyboardAvoidingBehavior = 'height',
-      keyboardVerticalOffset,
-      keyboardShowEvent,
-      keyboardHideEvent,
-      enableKeyboardListeners,
-      onKeyboardShow,
-      onKeyboardHide,
-      androidDismissKeyboardOnBackPress = true,
-      dismissKeyboardOnSubmit = true,
-      dismissKeyboardOnFocusPastLast = true,
-      autoScroll = true,
-      chainEnabled = true,
-      autoReturnKeyType = true,
-      dismissKeyboardOnTap = false,
-      submitOnLastFieldDone = false,
-      scrollViewRef: scrollViewRefProp,
-    } = props;
+  const {
+    children,
+    onSubmit,
+    scrollable = true,
+    avoidKeyboard = true,
+    ScrollViewComponent,
+    KeyboardAvoidingViewComponent,
+    scrollViewProps,
+    keyboardAvoidingViewProps,
+    extraScrollPadding = defaultExtraScrollPadding,
+    contentContainerStyle,
+    applyDefaultScrollContentFlexGrow = true,
+    keyboardShouldPersistTaps = 'handled',
+    keyboardDismissMode = 'interactive',
+    showsVerticalScrollIndicator = false,
+    iosKeyboardAvoidingBehavior = 'padding',
+    androidKeyboardAvoidingBehavior = 'height',
+    keyboardVerticalOffset,
+    keyboardShowEvent,
+    keyboardHideEvent,
+    enableKeyboardListeners,
+    onKeyboardShow,
+    onKeyboardHide,
+    androidDismissKeyboardOnBackPress = true,
+    dismissKeyboardOnSubmit = true,
+    dismissKeyboardOnFocusPastLast = true,
+    autoScroll = true,
+    chainEnabled = true,
+    autoReturnKeyType = true,
+    dismissKeyboardOnTap = false,
+    submitOnLastFieldDone = false,
+    keyboardAccessoryView,
+    keyboardAccessoryViewMode = 'always',
+    scrollViewRef: scrollViewRefProp,
+  } = props;
 
-    const fieldsRef = useRef<{ ref: React.MutableRefObject<TextInput | null>; skip?: boolean }[]>([]);
-    const internalScrollRef = useRef<ScrollView | null>(null);
+  const fieldsRef = useRef<{ ref: React.MutableRefObject<TextInput | null>; skip?: boolean }[]>([]);
+  const internalScrollRef = useRef<ScrollView | null>(null);
+  const [accessoryHeight, setAccessoryHeight] = React.useState(0);
 
-    const setMergedScrollRef = useCallback(
-      (node: ScrollView | null) => {
-        internalScrollRef.current = node;
-        if (!scrollViewRefProp) return;
-        if (typeof scrollViewRefProp === 'function') {
-          scrollViewRefProp(node);
-        } else {
-          (scrollViewRefProp as React.MutableRefObject<ScrollView | null>).current = node;
-        }
-      },
-      [scrollViewRefProp],
-    );
+  // Ref to the outermost wrapper View — used to measure how far the container
+  // bottom sits above the real screen bottom (e.g. tab bar height).
+  // The keyboard height from events is always in screen coordinates, so we
+  // subtract this offset to get the correct `bottom` value within our View.
+  const posRef = useRef<View | null>(null);
+  const bottomOffsetRef = useRef(0);
+  const handleContainerLayout = useCallback(() => {
+    posRef.current?.measureInWindow((_x, _y, _w, _h) => {
+      const screenH = Dimensions.get('screen').height;
+      bottomOffsetRef.current = Math.max(screenH - (_y + _h), 0);
+    });
+  }, []);
 
-    const register = useCallback((inputRef: React.MutableRefObject<TextInput | null>, skip?: boolean): number => {
-      const fields = fieldsRef.current;
-      const existingIdx = fields.findIndex(f => f.ref === inputRef);
-      if (existingIdx === -1) {
-        fields.push({ ref: inputRef, skip });
-        return fields.length - 1;
+  const setMergedScrollRef = useCallback(
+    (node: ScrollView | null) => {
+      internalScrollRef.current = node;
+      if (!scrollViewRefProp) return;
+      if (typeof scrollViewRefProp === 'function') {
+        scrollViewRefProp(node);
+      } else {
+        (scrollViewRefProp as React.MutableRefObject<ScrollView | null>).current = node;
       }
-      return existingIdx;
-    }, []);
+    },
+    [scrollViewRefProp],
+  );
 
-    const unregister = useCallback((inputRef: React.MutableRefObject<TextInput | null>) => {
+  const register = useCallback((inputRef: React.MutableRefObject<TextInput | null>, skip?: boolean): number => {
+    const fields = fieldsRef.current;
+    const existingIdx = fields.findIndex(f => f.ref === inputRef);
+    if (existingIdx === -1) {
+      fields.push({ ref: inputRef, skip });
+      return fields.length - 1;
+    }
+    return existingIdx;
+  }, []);
+
+  const unregister = useCallback((inputRef: React.MutableRefObject<TextInput | null>) => {
+    const fields = fieldsRef.current;
+    const idx = fields.findIndex(f => f.ref === inputRef);
+    if (idx > -1) fields.splice(idx, 1);
+  }, []);
+
+  const updateField = useCallback((inputRef: React.MutableRefObject<TextInput | null>, skip?: boolean) => {
+    const fields = fieldsRef.current;
+    const idx = fields.findIndex(f => f.ref === inputRef);
+    if (idx > -1) {
+      fields[idx].skip = skip;
+    }
+  }, []);
+
+  const count = useCallback(() => fieldsRef.current.length, []);
+
+  const hasNext = useCallback((currentIndex: number) => {
+    const fields = fieldsRef.current;
+    for (let i = currentIndex + 1; i < fields.length; i++) {
+      if (!fields[i].skip) return true;
+    }
+    return false;
+  }, []);
+
+  const scrollInputIntoView = useCallback(
+    (input: TextInput | null, padding?: number) => {
+      const scroll = internalScrollRef.current;
+      if (!scroll || !input) return;
+      const handle = findNodeHandle(input);
+      if (!handle) return;
+      const pad = padding ?? (typeof extraScrollPadding === 'number' ? extraScrollPadding : 0);
+
+      // Use a small timeout + requestAnimationFrame to ensure the scroll happens 
+      // after layout cycles and keyboard animations have started.
+      setTimeout(() => {
+        requestAnimationFrame(() => {
+          scroll.scrollResponderScrollNativeHandleToKeyboard?.(handle, pad, true);
+        });
+      }, 50);
+    },
+    [extraScrollPadding],
+  );
+
+  const focusNext = useCallback(
+    (currentIndex: number) => {
       const fields = fieldsRef.current;
-      const idx = fields.findIndex(f => f.ref === inputRef);
-      if (idx > -1) fields.splice(idx, 1);
-    }, []);
+      let nextField = null;
 
-    const updateField = useCallback((inputRef: React.MutableRefObject<TextInput | null>, skip?: boolean) => {
-      const fields = fieldsRef.current;
-      const idx = fields.findIndex(f => f.ref === inputRef);
-      if (idx > -1) {
-        fields[idx].skip = skip;
-      }
-    }, []);
-
-    const count = useCallback(() => fieldsRef.current.length, []);
-
-    const hasNext = useCallback((currentIndex: number) => {
-      const fields = fieldsRef.current;
       for (let i = currentIndex + 1; i < fields.length; i++) {
-        if (!fields[i].skip) return true;
+        if (!fields[i].skip) {
+          nextField = fields[i].ref;
+          break;
+        }
       }
+
+      if (nextField?.current) {
+        nextField.current.focus();
+        scrollInputIntoView(nextField.current);
+      } else if (dismissKeyboardOnFocusPastLast) {
+        Keyboard.dismiss();
+      }
+    },
+    [dismissKeyboardOnFocusPastLast, scrollInputIntoView],
+  );
+
+  const submitForm = useCallback(() => {
+    if (dismissKeyboardOnSubmit) {
+      Keyboard.dismiss();
+    }
+    onSubmit?.();
+  }, [dismissKeyboardOnSubmit, onSubmit]);
+
+  useImperativeHandle(
+    ref,
+    (): FieldFormHandle => ({
+      focusNext,
+      scrollInputIntoView,
+      dismissKeyboard: () => Keyboard.dismiss(),
+      getScrollView: () => internalScrollRef.current,
+    }),
+    [focusNext, scrollInputIntoView],
+  );
+
+  useEffect(() => {
+    if (Platform.OS !== 'android' || !androidDismissKeyboardOnBackPress) {
+      return undefined;
+    }
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      Keyboard.dismiss();
       return false;
-    }, []);
+    });
+    return () => sub.remove();
+  }, [androidDismissKeyboardOnBackPress]);
 
-    const scrollInputIntoView = useCallback(
-      (input: TextInput | null, padding?: number) => {
-        const scroll = internalScrollRef.current;
-        if (!scroll || !input) return;
-        const handle = findNodeHandle(input);
-        if (!handle) return;
-        const pad = padding ?? (typeof extraScrollPadding === 'number' ? extraScrollPadding : 0);
+  const animatedMargin = useRef(new Animated.Value(0)).current;
 
-        // Use a small timeout + requestAnimationFrame to ensure the scroll happens 
-        // after layout cycles and keyboard animations have started.
-        setTimeout(() => {
-          requestAnimationFrame(() => {
-            scroll.scrollResponderScrollNativeHandleToKeyboard?.(handle, pad, true);
-          });
-        }, 50);
-      },
-      [extraScrollPadding],
-    );
+  // ─── Dedicated accessory animation ────────────────────────────────
+  // Uses Animated.timing driven by keyboard events (not useAnimatedKeyboard)
+  // so it ALWAYS tracks the keyboard in precise sync, regardless of whether
+  // Reanimated worklets are running on the UI thread.
+  //
+  // iOS:  keyboardWillShow / keyboardWillHide   (fire before animation starts)
+  // Android: keyboardDidShow / keyboardDidHide   (fire after animation)
+  // In both cases we use e.duration to match the keyboard's own timing.
+  const accessoryMargin = useRef(new Animated.Value(0)).current;
+  const accessoryOpacity = useRef(
+    new Animated.Value(keyboardAccessoryViewMode === 'whenKeyboardOpen' ? 0 : 1)
+  ).current;
 
-    const focusNext = useCallback(
-      (currentIndex: number) => {
-        const fields = fieldsRef.current;
-        let nextField = null;
-        
-        for (let i = currentIndex + 1; i < fields.length; i++) {
-          if (!fields[i].skip) {
-            nextField = fields[i].ref;
-            break;
-          }
-        }
-        
-        if (nextField?.current) {
-          nextField.current.focus();
-          scrollInputIntoView(nextField.current);
-        } else if (dismissKeyboardOnFocusPastLast) {
-          Keyboard.dismiss();
-        }
-      },
-      [dismissKeyboardOnFocusPastLast, scrollInputIntoView],
-    );
+  useEffect(() => {
+    if (!keyboardAccessoryView) return;
 
-    const submitForm = useCallback(() => {
-      if (dismissKeyboardOnSubmit) {
-        Keyboard.dismiss();
-      }
-      onSubmit?.();
-    }, [dismissKeyboardOnSubmit, onSubmit]);
+    // Always use Will-events on iOS so animation starts in sync;
+    // Did-events on Android where Will-events don't exist.
+    const accShowEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const accHideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
-    useImperativeHandle(
-      ref,
-      (): FieldFormHandle => ({
-        focusNext,
-        scrollInputIntoView,
-        dismissKeyboard: () => Keyboard.dismiss(),
-        getScrollView: () => internalScrollRef.current,
-      }),
-      [focusNext, scrollInputIntoView],
-    );
+    const accShowSub = Keyboard.addListener(accShowEvent, e => {
+      const h = e.endCoordinates.height;
+      // Use the keyboard's own duration — this is the secret to perfect sync.
+      const dur = e.duration || 250;
+      // iOS keyboard spring decelerates rapidly and is perceptually "at rest" well
+      // before the reported duration ends. Using expoOut (Bezier 0.16,1,0.3,1)
+      // means we reach 97% of target at ~35% of duration — our bar is visually
+      // settled before the keyboard even starts to slow, eliminating trailing motion.
+      const easing = Platform.OS === 'ios'
+        ? Easing.bezier(0.16, 1, 0.3, 1)  // expoOut — fast rise, no animation tail
+        : Easing.out(Easing.ease);
+      // Subtract the container's offset from the real screen bottom (e.g. tab bar
+      // height). Keyboard height is in screen coords; our `bottom` prop is in
+      // container coords — without this the bar floats above the keyboard by exactly
+      // the tab bar height.
+      const adjustedH = Math.max(h - bottomOffsetRef.current, 0);
 
-    useEffect(() => {
-      if (Platform.OS !== 'android' || !androidDismissKeyboardOnBackPress) {
-        return undefined;
-      }
-      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-        Keyboard.dismiss();
-        return false;
-      });
-      return () => sub.remove();
-    }, [androidDismissKeyboardOnBackPress]);
-
-    const animatedMargin = useRef(new Animated.Value(0)).current;
-
-    useEffect(() => {
-      const showEvent =
-        keyboardShowEvent ?? (Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow');
-      const hideEvent =
-        keyboardHideEvent ?? (Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide');
-
-      const showSub = Keyboard.addListener(showEvent, e => {
-        const h = e.endCoordinates.height;
-        const offset = resolveKeyboardVerticalOffset(keyboardVerticalOffset);
-        const finalHeight = Math.max(h + offset, 0);
-
-        if (avoidKeyboard && !isReanimatedAvailable) {
-          Animated.timing(animatedMargin, {
-            toValue: finalHeight,
-            duration: e.duration || 250,
-            easing: e.easing ? Easing.out(Easing.poly(4)) : Easing.out(Easing.quad), // Standard keyboard easing
-            useNativeDriver: false, // margin doesn't support native driver
-          }).start();
-        }
-        onKeyboardShow?.({ height: h, event: e });
-      });
-
-      const hideSub = Keyboard.addListener(hideEvent, e => {
-        if (!isReanimatedAvailable) {
-          Animated.timing(animatedMargin, {
-            toValue: 0,
-            duration: e?.duration || 250,
+      const animations: Animated.CompositeAnimation[] = [
+        Animated.timing(accessoryMargin, {
+          toValue: adjustedH,
+          duration: dur,
+          easing,
+          useNativeDriver: false,
+        }),
+      ];
+      if (keyboardAccessoryViewMode === 'whenKeyboardOpen') {
+        animations.push(
+          Animated.timing(accessoryOpacity, {
+            toValue: 1,
+            // Fade in quickly at the start of the keyboard animation
+            duration: Math.min(dur * 0.25, 80),
             easing: Easing.out(Easing.quad),
             useNativeDriver: false,
-          }).start();
-        }
-        onKeyboardHide?.();
-      });
-
-      return () => {
-        showSub.remove();
-        hideSub.remove();
-      };
-    }, [
-      avoidKeyboard,
-      keyboardVerticalOffset,
-      keyboardShowEvent,
-      keyboardHideEvent,
-      onKeyboardShow,
-      onKeyboardHide,
-    ]);
-
-    const ctx = useMemo(
-      (): FieldFormContextValue => ({
-        register,
-        unregister,
-        updateField,
-        focusNext,
-        scrollInputIntoView,
-        submitForm,
-        count,
-        hasNext,
-        autoScroll,
-        chainEnabled,
-        autoReturnKeyType,
-        submitOnLastFieldDone,
-      }),
-      [
-        register,
-        unregister,
-        updateField,
-        focusNext,
-        scrollInputIntoView,
-        submitForm,
-        count,
-        hasNext,
-        autoScroll,
-        chainEnabled,
-        autoReturnKeyType,
-        submitOnLastFieldDone,
-      ],
-    );
-
-    const {
-      style: scrollStyleFromProps,
-      contentContainerStyle: scrollContentFromProps,
-      ...scrollRest
-    } = scrollViewProps ?? {};
-
-    const {
-      style: kavStyleFromProps,
-      ...kavRest
-    } = keyboardAvoidingViewProps ?? {};
-
-    const mergedContentContainerStyle = [
-      applyDefaultScrollContentFlexGrow ? styles.scrollContent : null,
-      contentContainerStyle,
-      scrollContentFromProps,
-    ];
-
-    const kavBehavior =
-      Platform.OS === 'ios' ? iosKeyboardAvoidingBehavior : androidKeyboardAvoidingBehavior;
-    const kavOffset = resolveKeyboardVerticalOffset(keyboardVerticalOffset);
-
-    const KavComp = KeyboardAvoidingViewComponent ?? KeyboardAvoidingView;
-
-    let content: React.ReactNode = children;
-
-    if (scrollable) {
-      const scrollProps: ScrollViewProps = {
-        keyboardDismissMode,
-        keyboardShouldPersistTaps,
-        showsVerticalScrollIndicator,
-        style: scrollStyleFromProps,
-        contentContainerStyle: mergedContentContainerStyle,
-        automaticallyAdjustKeyboardInsets: Platform.OS === 'ios' ? avoidKeyboard : undefined,
-        children: (
-          <>
-            {children}
-            {Platform.OS === 'ios' && avoidKeyboard ? (
-              <View style={{ height: extraScrollPadding }} />
-            ) : isReanimatedAvailable ? (
-              <ReanimatedSpacer
-                avoidKeyboard={avoidKeyboard}
-                offset={kavOffset}
-                extraPad={typeof extraScrollPadding === 'number' ? extraScrollPadding : 0}
-              />
-            ) : (
-              <Animated.View style={{ height: Animated.add(extraScrollPadding, animatedMargin) }} />
-            )}
-          </>
-        ),
-        ...scrollRest,
-      };
-
-      const ScrollTarget = ScrollViewComponent ?? ScrollView;
-
-      content = createElement(ScrollTarget, {
-        ...scrollProps,
-        ref: setMergedScrollRef,
-      } as ScrollViewProps & { ref: typeof setMergedScrollRef });
-
-      if (dismissKeyboardOnTap) {
-        content = (
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-            {content}
-          </TouchableWithoutFeedback>
+          })
         );
       }
+      Animated.parallel(animations).start();
+    });
+
+    const accHideSub = Keyboard.addListener(accHideEvent, e => {
+      const dur = e?.duration || 250;
+
+      if (keyboardAccessoryViewMode === 'always') {
+        // ── 'always' mode ──────────────────────────────────────────────
+        // The bar doesn't need to track the keyboard going down at all.
+        // Use a spring so it feels like a natural gravity drop:
+        //   - damping < criticalDamping → slightly underdamped → subtle
+        //     bounce when it lands at bottom (like something settling).
+        //   - Completely independent of the keyboard's easing/duration.
+        Animated.spring(accessoryMargin, {
+          toValue: 0,
+          damping: 14,       // < 2*sqrt(160*1) ≈ 25.3  →  underdamped ~ζ 0.55
+          stiffness: 160,
+          mass: 1,
+          overshootClamping: true,  // allow the small landing bounce
+          restDisplacementThreshold: 0.5,
+          restSpeedThreshold: 0.5,
+          useNativeDriver: false,
+        }).start();
+      } else {
+        // ── 'whenKeyboardOpen' mode ────────────────────────────────────
+        // Bar must disappear while the keyboard is dismissed, so stay
+        // timed with the keyboard event duration.
+        Animated.parallel([
+          Animated.timing(accessoryMargin, {
+            toValue: 0,
+            duration: dur,
+            easing: Easing.in(Easing.quad),
+            useNativeDriver: false,
+          }),
+          Animated.timing(accessoryOpacity, {
+            toValue: 0,
+            duration: Math.min(dur * 0.25, 80),
+            easing: Easing.in(Easing.quad),
+            useNativeDriver: false,
+          }),
+        ]).start();
+      }
+    });
+
+    return () => {
+      accShowSub.remove();
+      accHideSub.remove();
+    };
+  }, [
+    keyboardAccessoryView,
+    keyboardAccessoryViewMode,
+    accessoryMargin,
+    accessoryOpacity,
+  ]);
+  // ──────────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    const showEvent =
+      keyboardShowEvent ?? (Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow');
+    const hideEvent =
+      keyboardHideEvent ?? (Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide');
+
+    const showSub = Keyboard.addListener(showEvent, e => {
+      const h = e.endCoordinates.height;
+      const offset = resolveKeyboardVerticalOffset(keyboardVerticalOffset);
+      const finalHeight = Math.max(h + offset, 0);
+
+      // Only needed when Reanimated is NOT available (content spacer fallback)
+      if (!isReanimatedAvailable && avoidKeyboard) {
+        Animated.timing(animatedMargin, {
+          toValue: finalHeight,
+          duration: e.duration || 250,
+          easing: Easing.out(Easing.poly(4)),
+          useNativeDriver: false,
+        }).start();
+      }
+      onKeyboardShow?.({ height: h, event: e });
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, e => {
+      if (!isReanimatedAvailable && avoidKeyboard) {
+        Animated.timing(animatedMargin, {
+          toValue: 0,
+          duration: e?.duration || 250,
+          easing: Easing.out(Easing.poly(4)),
+          useNativeDriver: false,
+        }).start();
+      }
+      onKeyboardHide?.();
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [
+    avoidKeyboard,
+    keyboardVerticalOffset,
+    keyboardShowEvent,
+    keyboardHideEvent,
+    onKeyboardShow,
+    onKeyboardHide,
+  ]);
+
+  const ctx = useMemo(
+    (): FieldFormContextValue => ({
+      register,
+      unregister,
+      updateField,
+      focusNext,
+      scrollInputIntoView,
+      submitForm,
+      count,
+      hasNext,
+      autoScroll,
+      chainEnabled,
+      autoReturnKeyType,
+      submitOnLastFieldDone,
+    }),
+    [
+      register,
+      unregister,
+      updateField,
+      focusNext,
+      scrollInputIntoView,
+      submitForm,
+      count,
+      hasNext,
+      autoScroll,
+      chainEnabled,
+      autoReturnKeyType,
+      submitOnLastFieldDone,
+    ],
+  );
+
+  const {
+    style: scrollStyleFromProps,
+    contentContainerStyle: scrollContentFromProps,
+    ...scrollRest
+  } = scrollViewProps ?? {};
+
+  const {
+    style: kavStyleFromProps,
+    ...kavRest
+  } = keyboardAvoidingViewProps ?? {};
+
+  const mergedContentContainerStyle = [
+    applyDefaultScrollContentFlexGrow ? styles.scrollContent : null,
+    contentContainerStyle,
+    scrollContentFromProps,
+    keyboardAccessoryView ? { paddingBottom: accessoryHeight } : null,
+  ];
+
+  const kavBehavior =
+    Platform.OS === 'ios' ? iosKeyboardAvoidingBehavior : androidKeyboardAvoidingBehavior;
+  const kavOffset = resolveKeyboardVerticalOffset(keyboardVerticalOffset);
+
+  const KavComp = KeyboardAvoidingViewComponent ?? KeyboardAvoidingView;
+
+  let content: React.ReactNode = children;
+
+  if (scrollable) {
+    const scrollProps: ScrollViewProps = {
+      keyboardDismissMode,
+      keyboardShouldPersistTaps,
+      showsVerticalScrollIndicator,
+      style: scrollStyleFromProps,
+      contentContainerStyle: mergedContentContainerStyle,
+      automaticallyAdjustKeyboardInsets: Platform.OS === 'ios' ? avoidKeyboard : undefined,
+      children: (
+        <>
+          {children}
+          {Platform.OS === 'ios' && avoidKeyboard ? (
+            <View style={{ height: extraScrollPadding }} />
+          ) : isReanimatedAvailable ? (
+            <ReanimatedSpacer
+              avoidKeyboard={avoidKeyboard}
+              offset={kavOffset}
+              extraPad={typeof extraScrollPadding === 'number' ? extraScrollPadding : 0}
+            />
+          ) : (
+            <Animated.View style={{ height: Animated.add(extraScrollPadding, animatedMargin) }} />
+          )}
+        </>
+      ),
+      ...scrollRest,
+    };
+
+    const ScrollTarget = ScrollViewComponent ?? ScrollView;
+
+    content = createElement(ScrollTarget, {
+      ...scrollProps,
+      ref: setMergedScrollRef,
+    } as ScrollViewProps & { ref: typeof setMergedScrollRef });
+
+    if (dismissKeyboardOnTap) {
+      content = (
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          {content}
+        </TouchableWithoutFeedback>
+      );
     }
+  }
 
-    // No outer wrapper needed with internal spacer approach
-
-    return (
-      <FieldFlowContext.Provider value={ctx}>{content}</FieldFlowContext.Provider>
-    );
+  // Wrap everything in a stable View so:
+  //  1. The absolute-positioned accessory bar is scoped correctly.
+  //  2. measureInWindow (via posRef) can compute the container's offset
+  //     from the real screen bottom to account for tab bars etc.
+  return (
+    <View ref={posRef} style={styles.container} onLayout={handleContainerLayout}>
+      <FieldFlowContext.Provider value={ctx}>
+        {content}
+        {keyboardAccessoryView && (
+          // Always use Animated.View here — driven by the dedicated
+          // accessoryMargin effect above which uses the keyboard's own
+          // duration for frame-accurate sync on both platforms.
+          <Animated.View
+            style={[
+              styles.accessory,
+              { bottom: accessoryMargin },
+              keyboardAccessoryViewMode === 'whenKeyboardOpen'
+                ? { opacity: accessoryOpacity }
+                : null,
+            ]}
+            pointerEvents="box-none"
+          >
+            <View onLayout={(e) => setAccessoryHeight(e.nativeEvent.layout.height)}>
+              {keyboardAccessoryView}
+            </View>
+          </Animated.View>
+        )}
+      </FieldFlowContext.Provider>
+    </View>
+  );
 });
 
 FieldForm.displayName = 'FieldForm';
 
 const styles = StyleSheet.create({
+  container: { flex: 1 },
   flex1: { flex: 1 },
   scrollContent: { flexGrow: 1 },
+  accessory: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 999,
+  },
 });
