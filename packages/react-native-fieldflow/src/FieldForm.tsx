@@ -23,6 +23,45 @@ import {
   type TextInput,
 } from 'react-native';
 
+let AnimatedReanimatedView: any;
+let useAnimatedKeyboard: any;
+let useAnimatedStyle: any;
+let isReanimatedAvailable = false;
+
+try {
+  const rea = require('react-native-reanimated');
+  // Handle different ESM/CJS export artifacts in React Native versions
+  AnimatedReanimatedView = rea.default?.View || rea.Animated?.View || rea.View;
+  useAnimatedKeyboard = rea.useAnimatedKeyboard;
+  useAnimatedStyle = rea.useAnimatedStyle;
+  if (AnimatedReanimatedView && useAnimatedKeyboard && useAnimatedStyle) {
+    isReanimatedAvailable = true;
+  }
+} catch (e) {
+  // gracefully degrade to Animated.timing if not found
+}
+
+const ReanimatedSpacer = ({
+  avoidKeyboard,
+  offset,
+  extraPad,
+}: {
+  avoidKeyboard: boolean;
+  offset: number;
+  extraPad: number;
+}) => {
+  // We can safely call hooks here because this component is only rendered if isReanimatedAvailable = true
+  const keyboard = useAnimatedKeyboard();
+  const animatedStyle = useAnimatedStyle(() => {
+    const kHeight = avoidKeyboard ? keyboard.height.value : 0;
+    const finalHeight = Math.max(kHeight + offset, 0);
+    return { height: finalHeight + extraPad };
+  }, [avoidKeyboard, offset, extraPad]);
+  
+  const AnimatedView = AnimatedReanimatedView;
+  return <AnimatedView style={animatedStyle} />;
+};
+
 import { FieldFlowContext } from './context';
 import type {
   FieldFormContextValue,
@@ -31,7 +70,7 @@ import type {
   KeyboardPlatformOs,
 } from './types';
 
-const defaultExtraScrollPadding = 10;
+const defaultExtraScrollPadding = 50;
 
 function resolveKeyboardVerticalOffset(
   value: FieldFormProps['keyboardVerticalOffset'],
@@ -76,10 +115,11 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
       chainEnabled = true,
       autoReturnKeyType = true,
       dismissKeyboardOnTap = false,
+      submitOnLastFieldDone = false,
       scrollViewRef: scrollViewRefProp,
     } = props;
 
-    const fieldsRef = useRef<React.MutableRefObject<TextInput | null>[]>([]);
+    const fieldsRef = useRef<{ ref: React.MutableRefObject<TextInput | null>; skip?: boolean }[]>([]);
     const internalScrollRef = useRef<ScrollView | null>(null);
 
     const setMergedScrollRef = useCallback(
@@ -95,21 +135,39 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
       [scrollViewRefProp],
     );
 
-    const register = useCallback((inputRef: React.MutableRefObject<TextInput | null>): number => {
+    const register = useCallback((inputRef: React.MutableRefObject<TextInput | null>, skip?: boolean): number => {
       const fields = fieldsRef.current;
-      if (!fields.includes(inputRef)) {
-        fields.push(inputRef);
+      const existingIdx = fields.findIndex(f => f.ref === inputRef);
+      if (existingIdx === -1) {
+        fields.push({ ref: inputRef, skip });
+        return fields.length - 1;
       }
-      return fields.indexOf(inputRef);
+      return existingIdx;
     }, []);
 
     const unregister = useCallback((inputRef: React.MutableRefObject<TextInput | null>) => {
       const fields = fieldsRef.current;
-      const idx = fields.indexOf(inputRef);
+      const idx = fields.findIndex(f => f.ref === inputRef);
       if (idx > -1) fields.splice(idx, 1);
     }, []);
 
+    const updateField = useCallback((inputRef: React.MutableRefObject<TextInput | null>, skip?: boolean) => {
+      const fields = fieldsRef.current;
+      const idx = fields.findIndex(f => f.ref === inputRef);
+      if (idx > -1) {
+        fields[idx].skip = skip;
+      }
+    }, []);
+
     const count = useCallback(() => fieldsRef.current.length, []);
+
+    const hasNext = useCallback((currentIndex: number) => {
+      const fields = fieldsRef.current;
+      for (let i = currentIndex + 1; i < fields.length; i++) {
+        if (!fields[i].skip) return true;
+      }
+      return false;
+    }, []);
 
     const scrollInputIntoView = useCallback(
       (input: TextInput | null, padding?: number) => {
@@ -133,10 +191,18 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
     const focusNext = useCallback(
       (currentIndex: number) => {
         const fields = fieldsRef.current;
-        const next = fields[currentIndex + 1];
-        if (next?.current) {
-          next.current.focus();
-          scrollInputIntoView(next.current);
+        let nextField = null;
+        
+        for (let i = currentIndex + 1; i < fields.length; i++) {
+          if (!fields[i].skip) {
+            nextField = fields[i].ref;
+            break;
+          }
+        }
+        
+        if (nextField?.current) {
+          nextField.current.focus();
+          scrollInputIntoView(nextField.current);
         } else if (dismissKeyboardOnFocusPastLast) {
           Keyboard.dismiss();
         }
@@ -186,7 +252,7 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
         const offset = resolveKeyboardVerticalOffset(keyboardVerticalOffset);
         const finalHeight = Math.max(h + offset, 0);
 
-        if (avoidKeyboard) {
+        if (avoidKeyboard && !isReanimatedAvailable) {
           Animated.timing(animatedMargin, {
             toValue: finalHeight,
             duration: e.duration || 250,
@@ -198,12 +264,14 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
       });
 
       const hideSub = Keyboard.addListener(hideEvent, e => {
-        Animated.timing(animatedMargin, {
-          toValue: 0,
-          duration: e?.duration || 250,
-          easing: Easing.out(Easing.quad),
-          useNativeDriver: false,
-        }).start();
+        if (!isReanimatedAvailable) {
+          Animated.timing(animatedMargin, {
+            toValue: 0,
+            duration: e?.duration || 250,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: false,
+          }).start();
+        }
         onKeyboardHide?.();
       });
 
@@ -224,24 +292,30 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
       (): FieldFormContextValue => ({
         register,
         unregister,
+        updateField,
         focusNext,
         scrollInputIntoView,
         submitForm,
         count,
+        hasNext,
         autoScroll,
         chainEnabled,
         autoReturnKeyType,
+        submitOnLastFieldDone,
       }),
       [
         register,
         unregister,
+        updateField,
         focusNext,
         scrollInputIntoView,
         submitForm,
         count,
+        hasNext,
         autoScroll,
         chainEnabled,
         autoReturnKeyType,
+        submitOnLastFieldDone,
       ],
     );
 
@@ -277,10 +351,21 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
         showsVerticalScrollIndicator,
         style: scrollStyleFromProps,
         contentContainerStyle: mergedContentContainerStyle,
+        automaticallyAdjustKeyboardInsets: Platform.OS === 'ios' ? avoidKeyboard : undefined,
         children: (
           <>
             {children}
-            <Animated.View style={{ height: Animated.add(extraScrollPadding, animatedMargin) }} />
+            {Platform.OS === 'ios' && avoidKeyboard ? (
+              <View style={{ height: extraScrollPadding }} />
+            ) : isReanimatedAvailable ? (
+              <ReanimatedSpacer
+                avoidKeyboard={avoidKeyboard}
+                offset={kavOffset}
+                extraPad={typeof extraScrollPadding === 'number' ? extraScrollPadding : 0}
+              />
+            ) : (
+              <Animated.View style={{ height: Animated.add(extraScrollPadding, animatedMargin) }} />
+            )}
           </>
         ),
         ...scrollRest,
