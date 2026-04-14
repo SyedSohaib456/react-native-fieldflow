@@ -16,6 +16,7 @@
     "expo-modules-core": "~2.2.0",
     "invariant": "^2.2.4",
     "react-native-fieldflow": "workspace:*",
+    "@react-native-community/datetimepicker": "^8.2.0",
     "@expo/vector-icons": "^15.0.3",
     "@react-navigation/bottom-tabs": "^7.4.0",
     "@react-navigation/elements": "^2.6.3",

@@ -1,7 +1,7 @@
 {
   "name": "react-native-fieldflow",
   "version": "1.0.0",
-  "description": "High-performance field flow (keyboard avoidance + focus chaining) for React Native.",
+  "description": "The ultimate keyboard management and form flow solution for React Native. Zero native modules. Expo compatible.",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "files": [
@@ -9,23 +9,71 @@
     "README.md"
   ],
   "scripts": {
+    "typecheck": "tsc --noEmit",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
     "react-native",
     "keyboard",
     "avoidance",
-    "scrollview",
     "form",
-    "fieldflow"
+    "fieldflow",
+    "validation",
+    "otp",
+    "input",
+    "focus-chain",
+    "keyboard-aware",
+    "expo"
   ],
   "author": "Syed Sohaib",
   "license": "MIT",
   "peerDependencies": {
     "react": ">=16.8.0",
-    "react-native": "*",
-    "react-native-reanimated": ">=2.0.0",
-    "react-native-safe-area-context": ">=3.0.0"
+    "react-native": ">=0.68.0"
+  },
+  "peerDependenciesMeta": {
+    "react-native-reanimated": {
+      "optional": true
+    },
+    "react-native-safe-area-context": {
+      "optional": true
+    },
+    "zustand": {
+      "optional": true
+    },
+    "react-native-mmkv": {
+      "optional": true
+    },
+    "@react-native-async-storage/async-storage": {
+      "optional": true
+    },
+    "expo-haptics": {
+      "optional": true
+    },
+    "react-native-haptic-feedback": {
+      "optional": true
+    },
+    "react-hook-form": {
+      "optional": true
+    },
+    "formik": {
+      "optional": true
+    },
+    "zod": {
+      "optional": true
+    },
+    "yup": {
+      "optional": true
+    },
+    "@legendapp/list": {
+      "optional": true
+    },
+    "@react-native-community/datetimepicker": {
+      "optional": true
+    },
+    "@expo/vector-icons": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/react": "^19.0.0",

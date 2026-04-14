@@ -20,36 +20,36 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: 'Showcase',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="keypad-outline" size={size ?? 22} color={color} />
+            <Ionicons name="sparkles-outline" size={size ?? 22} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="login"
+        name="kitchen-sink"
         options={{
-          title: 'Form',
+          title: 'Kitchen Sink',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="document-text-outline" size={size ?? 22} color={color} />
+            <Ionicons name="layers-outline" size={size ?? 22} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="hooks"
+        name="stress-test"
         options={{
-          title: 'Hooks',
+          title: 'Stress Test',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="pulse-outline" size={size ?? 22} color={color} />
+            <Ionicons name="speedometer-outline" size={size ?? 22} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="advanced"
+        name="playground"
         options={{
-          title: 'Advanced',
+          title: 'Playground',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="settings-outline" size={size ?? 22} color={color} />
+            <Ionicons name="color-palette-outline" size={size ?? 22} color={color} />
           ),
         }}
       />

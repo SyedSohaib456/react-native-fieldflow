@@ -1,343 +1,235 @@
-/**
- * Home — Keyboard Form Showcase
- *
- * Package overview with live toggles for key features,
- * quick demo form, API list, and navigation to detail screens.
- */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useRef, useState } from 'react';
+import React from 'react';
 import {
-  Alert,
-  Platform,
+  Pressable,
+  ScrollView,
   StyleSheet,
   Text,
-  View
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import {
-  ActionButton,
-  FeatureCard,
-  SectionLabel,
-  StatusPill,
-  StyledInput,
-} from '@/components/showcase';
+import { SpecHeader } from '@/components/showcase/SpecHeader';
 import {
   ShowcaseColors as C,
   ShowcaseRadius,
-  ShowcaseSpacing,
+  ShowcaseSpacing as S,
 } from '@/constants/showcase-theme';
-import {
-  FieldForm,
-  useKeyboardState,
-  type FieldFormHandle,
-} from '../../../packages/react-native-fieldflow/src';
 
-export default function HomeScreen() {
+const SHOWCASE_ITEMS = [
+  {
+    id: 'vela-signup',
+    title: 'Sign Up',
+    subtitle: 'Vela Fintech',
+    description: 'Smart inference, phone picker, and password meter.',
+    icon: 'person-add-outline',
+    color: C.velaNavy,
+    badge: 'Popular',
+  },
+  {
+    id: 'vela-otp',
+    title: 'OTP Verification',
+    subtitle: 'Vela Fintech',
+    description: '6-digit code with auto-submit and error shake.',
+    icon: 'shield-checkmark-outline',
+    color: C.velaNavy,
+  },
+  {
+    id: 'marlo-payment',
+    title: 'Payment Details',
+    subtitle: 'Marlo Luxury',
+    description: 'Card formatting and dynamic brand detection.',
+    icon: 'card-outline',
+    color: C.marloGold,
+  },
+  {
+    id: 'profile-edit',
+    title: 'Profile Edit',
+    subtitle: 'Settings',
+    description: 'Grouped sections and dirty state tracking.',
+    icon: 'settings-outline',
+    color: C.textPrimary,
+  },
+  {
+    id: 'address-form',
+    title: 'Address Entry',
+    subtitle: 'Logistics',
+    description: 'Searchable regions and optional field chains.',
+    icon: 'map-outline',
+    color: C.wayfarerSky,
+  },
+  {
+    id: 'pulse-onboarding',
+    title: 'Fitness Onboarding',
+    subtitle: 'Pulse App',
+    description: 'Multi-step wizard with date and goal pickers.',
+    icon: 'fitness-outline',
+    color: C.pulseRose,
+    badge: 'New',
+  },
+  {
+    id: 'thread-chat',
+    title: 'Chat Compose',
+    subtitle: 'Thread Social',
+    description: 'Inverted avoidance with emoji panel support.',
+    icon: 'chatbubble-ellipses-outline',
+    color: C.threadTeal,
+  },
+  {
+    id: 'wayfarer-search',
+    title: 'Travel Search',
+    subtitle: 'Wayfarer',
+    description: 'Search suggestions and filter chips.',
+    icon: 'airplane-outline',
+    color: C.wayfarerSky,
+  },
+];
+
+export default function ShowcaseScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const formRef = useRef<FieldFormHandle>(null);
-  const { height: kbHeight, visible: kbVisible } = useKeyboardState();
-
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [submitted, setSubmitted] = useState(false);
-
-  // ── Feature toggles ────────────────────────────────
-  const [scrollEnabled, setScrollEnabled] = useState(true);
-  const [avoidEnabled, setAvoidEnabled] = useState(true);
-  const [autoScroll, setAutoScroll] = useState(true);
-  const [chainEnabled, setChainEnabled] = useState(true);
-  const [dismissOnTap, setDismissOnTap] = useState(true);
-
-  const handleSubmit = useCallback(() => {
-    setSubmitted(true);
-    Alert.alert('Submitted', `Name: ${name}\nEmail: ${email}`);
-    setTimeout(() => setSubmitted(false), 2500);
-  }, [name, email]);
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
-      <FieldForm
-        ref={formRef}
-        onSubmit={handleSubmit}
-        scrollable={scrollEnabled}
-        avoidKeyboard={avoidEnabled}
-        autoScroll={autoScroll}
-        chainEnabled={chainEnabled}
-        dismissKeyboardOnTap={dismissOnTap}
-        extraScrollPadding={100}
-        keyboardVerticalOffset={0}
-        scrollViewProps={{
-          contentContainerStyle: styles.scrollContent,
-          keyboardDismissMode: 'interactive',
-        }}>
+    <View style={styles.container}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 20 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <SpecHeader
+          title="Showcase"
+          subtitle="Real-world production screens built with FieldFlow context and components."
+        />
 
-        {/* ── Header ───────────────────────────────── */}
-        <View style={styles.header}>
-          <Text style={styles.title}>FieldFlow</Text>
-          <Text style={styles.subtitle}>
-            Scroll, avoid, field chains, and hooks — no native dependencies.
+        <View style={styles.grid}>
+          {SHOWCASE_ITEMS.map((item) => (
+            <Pressable
+              key={item.id}
+              style={({ pressed }) => [
+                styles.card,
+                pressed && styles.cardPressed,
+              ]}
+              onPress={() => {
+                router.push(`/showcase/${item.id}`);
+              }}
+            >
+              <View style={[styles.iconContainer, { backgroundColor: item.color }]}>
+                <Ionicons name={item.icon as any} size={22} color="#FFF" />
+              </View>
+
+              <View style={styles.cardContent}>
+                <View style={styles.cardHeader}>
+                  <Text style={styles.itemSubtitle}>{item.subtitle}</Text>
+                  {item.badge ? (
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>{item.badge}</Text>
+                    </View>
+                  ) : null}
+                </View>
+
+                <Text style={styles.itemTitle}>{item.title}</Text>
+                <Text style={styles.itemDesc}>{item.description}</Text>
+              </View>
+
+              <Ionicons name="chevron-forward" size={18} color={C.textTertiary} style={styles.chevron} />
+            </Pressable>
+          ))}
+        </View>
+
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>
+            Every screen above is a standard FieldForm flow.
           </Text>
         </View>
-
-        {/* ── Live Status ──────────────────────────── */}
-        <View style={styles.statusRow}>
-          <StatusPill
-            label="Keyboard"
-            value={kbVisible ? 'Open' : 'Closed'}
-            active={kbVisible}
-          />
-          <StatusPill
-            label="Height"
-            value={`${Math.round(kbHeight)}px`}
-            active={kbHeight > 0}
-          />
-        </View>
-
-        {/* ── Feature Toggles ──────────────────────── */}
-        <View style={styles.section}>
-          <SectionLabel title="Features" description="Toggle to preview behaviour" />
-          <View style={styles.toggleList}>
-            <FeatureCard
-              icon="resize-outline"
-              title="Scrollable"
-              description="Wraps content in a ScrollView"
-              toggleValue={scrollEnabled}
-              onToggle={setScrollEnabled}
-            />
-            <FeatureCard
-              icon="arrow-up-outline"
-              title="Avoid Keyboard"
-              description="Pushes content above the keyboard"
-              toggleValue={avoidEnabled}
-              onToggle={setAvoidEnabled}
-            />
-            <FeatureCard
-              icon="link-outline"
-              title="Input Chaining"
-              description="Next / Done auto-chains field focus"
-              toggleValue={chainEnabled}
-              onToggle={setChainEnabled}
-            />
-            <FeatureCard
-              icon="color-filter-outline"
-              title="Auto Scroll"
-              description="Scroll to focused field"
-              toggleValue={autoScroll}
-              onToggle={setAutoScroll}
-            />
-            <FeatureCard
-              icon="hand-right-outline"
-              title="Tap to Dismiss"
-              description="Tap empty area to close"
-              toggleValue={dismissOnTap}
-              onToggle={setDismissOnTap}
-            />
-          </View>
-        </View>
-
-        {/* ── Quick Demo Form ──────────────────────── */}
-        <View style={styles.section}>
-          <SectionLabel
-            title="Quick Demo"
-            description="Tap Next to chain focus, Done to submit"
-          />
-          <View style={styles.card}>
-            <StyledInput
-              icon="person-outline"
-              label="Your name"
-              placeholder="John Doe"
-              value={name}
-              onChangeText={setName}
-              autoCapitalize="words"
-            />
-            <StyledInput
-              icon="mail-outline"
-              label="Email address"
-              placeholder="john@example.com"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            <ActionButton title="Continue" onPress={handleSubmit} />
-            {submitted ? (
-              <View style={styles.successBanner}>
-                <Ionicons name="checkmark-circle" size={16} color={C.accent} />
-                <Text style={styles.successText}>Form submitted successfully</Text>
-              </View>
-            ) : null}
-          </View>
-        </View>
-
-        {/* ── Separator ────────────────────────────── */}
-        <View style={styles.separator} />
-
-        {/* ── Screen Navigation ────────────────────── */}
-        <View style={styles.section}>
-          <SectionLabel title="Explore" />
-          <View style={styles.navStack}>
-            <FeatureCard
-              icon="document-text-outline"
-              title="Login Form"
-              description="Chained inputs with Next / Done"
-              onPress={() => router.push('/(tabs)/login')}
-            />
-            <FeatureCard
-              icon="pulse-outline"
-              title="Hooks & State"
-              description="useKeyboardHeight, useKeyboardState"
-              onPress={() => router.push('/(tabs)/hooks')}
-            />
-            <FeatureCard
-              icon="settings-outline"
-              title="Advanced"
-              description="Imperative ref, callbacks, nextRef"
-              onPress={() => router.push('/(tabs)/advanced')}
-            />
-          </View>
-        </View>
-
-        {/* ── API Surface ──────────────────────────── */}
-        <View style={styles.section}>
-          <SectionLabel title="Exports" />
-          <View style={styles.apiList}>
-            {[
-              { name: 'FieldForm', icon: 'albums-outline' as const, tag: 'Component' },
-              { name: 'FieldInput', icon: 'create-outline' as const, tag: 'Component' },
-              { name: 'useKeyboardHeight', icon: 'analytics-outline' as const, tag: 'Hook' },
-              { name: 'useKeyboardVisible', icon: 'eye-outline' as const, tag: 'Hook' },
-              { name: 'useKeyboardState', icon: 'git-merge-outline' as const, tag: 'Hook' },
-              { name: 'dismissKeyboard', icon: 'close-circle-outline' as const, tag: 'Fn' },
-              { name: 'subscribeKeyboard', icon: 'notifications-outline' as const, tag: 'Fn' },
-            ].map((item, i, arr) => (
-              <View
-                key={item.name}
-                style={[
-                  styles.apiRow,
-                  i < arr.length - 1 && styles.apiRowBorder,
-                ]}>
-                <Ionicons name={item.icon} size={16} color={C.textTertiary} />
-                <Text style={styles.apiName}>{item.name}</Text>
-                <Text style={styles.apiTag}>{item.tag}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      </FieldForm>
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
+  container: {
     flex: 1,
     backgroundColor: C.bgPrimary,
   },
   scrollContent: {
-    // marginBottom and height spacer now handled by KeyboardForm
+    flexGrow: 1,
   },
-
-  header: {
-    paddingHorizontal: ShowcaseSpacing.xl,
-    paddingTop: ShowcaseSpacing.xxl,
-    paddingBottom: ShowcaseSpacing.lg,
-    gap: ShowcaseSpacing.sm,
+  grid: {
+    paddingHorizontal: S.xl,
+    gap: S.md,
   },
-  title: {
-    fontSize: 32,
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.bgCard,
+    borderRadius: ShowcaseRadius.lg,
+    padding: S.lg,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  cardPressed: {
+    backgroundColor: C.bgPrimary,
+    borderColor: C.border,
+    transform: [{ scale: 0.98 }],
+  },
+  iconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: S.md,
+  },
+  cardContent: {
+    flex: 1,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: S.sm,
+    marginBottom: 2,
+  },
+  itemSubtitle: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: C.textTertiary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  itemTitle: {
+    fontSize: 17,
     fontWeight: '700',
     color: C.textPrimary,
-    letterSpacing: -0.5,
+    marginBottom: 2,
   },
-  subtitle: {
-    fontSize: 16,
+  itemDesc: {
+    fontSize: 13,
     color: C.textSecondary,
-    lineHeight: 23,
+    lineHeight: 18,
   },
-
-  statusRow: {
-    flexDirection: 'row',
-    gap: ShowcaseSpacing.sm,
-    paddingHorizontal: ShowcaseSpacing.xl,
-    marginBottom: ShowcaseSpacing.xl,
-  },
-
-  section: {
-    paddingHorizontal: ShowcaseSpacing.xl,
-    gap: ShowcaseSpacing.md,
-    marginBottom: ShowcaseSpacing.xxl,
-  },
-
-  toggleList: {
-    gap: ShowcaseSpacing.sm,
-  },
-
-  card: {
-    borderRadius: ShowcaseRadius.lg,
-    padding: ShowcaseSpacing.lg,
-    gap: ShowcaseSpacing.md,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  successBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: ShowcaseSpacing.sm,
+  badge: {
     backgroundColor: C.accentLight,
-    borderRadius: ShowcaseRadius.sm,
-    paddingHorizontal: ShowcaseSpacing.md,
-    paddingVertical: ShowcaseSpacing.sm + 2,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
-  successText: {
-    fontSize: 14,
+  badgeText: {
+    fontSize: 9,
+    fontWeight: '800',
     color: C.accent,
-    fontWeight: '500',
   },
-
-  separator: {
-    height: 1,
-    backgroundColor: C.separator,
-    marginHorizontal: ShowcaseSpacing.xl,
-    marginBottom: ShowcaseSpacing.xxl,
+  chevron: {
+    marginLeft: S.sm,
   },
-
-  navStack: {
-    gap: ShowcaseSpacing.sm,
-  },
-
-  apiList: {
-    borderRadius: ShowcaseRadius.md,
-    borderWidth: 1,
-    borderColor: C.border,
-    overflow: 'hidden',
-  },
-  apiRow: {
-    flexDirection: 'row',
+  footer: {
+    marginTop: S.xxl,
     alignItems: 'center',
-    gap: ShowcaseSpacing.sm,
-    paddingHorizontal: ShowcaseSpacing.lg,
-    paddingVertical: ShowcaseSpacing.md,
+    paddingHorizontal: S.xl,
   },
-  apiRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: C.borderSubtle,
-  },
-  apiName: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '500',
-    color: C.textPrimary,
-    ...Platform.select({
-      ios: { fontFamily: 'ui-monospace' },
-      default: { fontFamily: 'monospace' },
-    }),
-  },
-  apiTag: {
-    fontSize: 12,
-    fontWeight: '500',
+  footerText: {
+    fontSize: 13,
     color: C.textTertiary,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 });

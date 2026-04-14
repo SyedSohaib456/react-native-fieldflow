@@ -33,6 +33,13 @@ export const ShowcaseColors = {
   warning: '#FF9500',
   danger: '#FF3B30',
 
+  // ── Brand Identity ───────────────────────────────────
+  marloGold: '#D4AF37',
+  pulseRose: '#FF2D55',
+  wayfarerSky: '#007AFF',
+  velaNavy: '#0A1128',
+  threadTeal: '#008080',
+
   // ── Misc ─────────────────────────────────────────────
   separator: '#E5E5EA',
   tabBar: '#FFFFFF',

@@ -9,7 +9,7 @@
   "scripts": {
     "start": "bun run --filter fieldflow-showcase start",
     "android": "bun run --filter fieldflow-showcase android",
-    "ios": "bun run --filter fieldflow-showcase ios",
+  "ios": "bun run --filter fieldflow-showcase ios",
     "web": "bun run --filter fieldflow-showcase web",
     "lint": "turbo run lint",
     "build": "turbo run build",
