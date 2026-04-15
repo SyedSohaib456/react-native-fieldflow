@@ -82,23 +82,102 @@ export default function HomeScreen() {
           </Text>
         </View>
 
-        {/* ── Live Status ──────────────────────────── */}
-        <View style={styles.statusRow}>
-          <StatusPill
-            label="Keyboard"
-            value={kbVisible ? 'Open' : 'Closed'}
-            active={kbVisible}
+        {/* ── Demo Categories ──────────────────────── */}
+        <View style={styles.section}>
+          <SectionLabel 
+            title="Core Basics" 
+            description="The essentials of FieldFlow: chaining and avoidance" 
           />
-          <StatusPill
-            label="Height"
-            value={`${Math.round(kbHeight)}px`}
-            active={kbHeight > 0}
-          />
+          <View style={styles.navStack}>
+            <FeatureCard
+              icon="log-in-outline"
+              title="01. Login (Hello World)"
+              description="Simplest possible form — 2 fields, no config"
+              onPress={() => router.push('/demos/01-login')}
+            />
+            <FeatureCard
+              icon="person-add-outline"
+              title="02. Sign Up"
+              description="5-field chain with focus visualizer"
+              onPress={() => router.push('/demos/02-signup')}
+            />
+            <FeatureCard
+              icon="cart-outline"
+              title="03. Checkout"
+              description="Dynamic field skipping with skip prop"
+              onPress={() => router.push('/demos/03-checkout')}
+            />
+            <FeatureCard
+              icon="create-outline"
+              title="04. Profile Edit"
+              description="nextRef override & two-column layout"
+              onPress={() => router.push('/demos/04-profile')}
+            />
+          </View>
         </View>
 
-        {/* ── Feature Toggles ──────────────────────── */}
         <View style={styles.section}>
-          <SectionLabel title="Features" description="Toggle to preview behaviour" />
+          <SectionLabel 
+            title="Hooks & Behavior" 
+            description="Lifting UI and responding to keyboard state" 
+          />
+          <View style={styles.navStack}>
+            <FeatureCard
+              icon="move-outline"
+              title="05. Floating Button"
+              description="Lift UI using useKeyboardHeight"
+              onPress={() => router.push('/demos/05-floating-button')}
+            />
+            <FeatureCard
+              icon="browsers-outline"
+              title="06. Collapsing Header"
+              description="Animate UI out using useKeyboardVisible"
+              onPress={() => router.push('/demos/06-collapsing-header')}
+            />
+            <FeatureCard
+              icon="checkmark-done-outline"
+              title="07. Submit Behavior"
+              description="submitOnLastFieldDone contrast demo"
+              onPress={() => router.push('/demos/07-submit-behavior')}
+            />
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <SectionLabel 
+            title="Advanced Layouts" 
+            description="Deep customisation and platform parity" 
+          />
+          <View style={styles.navStack}>
+            <FeatureCard
+              icon="list-outline"
+              title="08. Long Form / Scroll"
+              description="scrollViewProps & RefreshControl"
+              onPress={() => router.push('/demos/08-long-form')}
+            />
+            <FeatureCard
+              icon="navigate-outline"
+              title="09. React Navigation"
+              description="Automatic window height measurement"
+              onPress={() => router.push('/demos/09-react-navigation')}
+            />
+            <FeatureCard
+              icon="git-compare-outline"
+              title="10. Before / After"
+              description="FieldFlow vs Boilerplate (LoC saved)"
+              onPress={() => router.push('/demos/10-comparison')}
+            />
+            <FeatureCard
+              icon="chatbox-ellipses-outline"
+              title="11. Accessory View"
+              description="Chat composer with accessory toolbar"
+              onPress={() => router.push('/demos/11-accessory-view')}
+            />
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <SectionLabel title="Live Status" />
           <View style={styles.toggleList}>
             <FeatureCard
               icon="resize-outline"
@@ -141,7 +220,7 @@ export default function HomeScreen() {
         {/* ── Quick Demo Form ──────────────────────── */}
         <View style={styles.section}>
           <SectionLabel
-            title="Quick Demo"
+            title="Quick Test"
             description="Tap Next to chain focus, Done to submit"
           />
           <View style={styles.card}>
@@ -169,34 +248,6 @@ export default function HomeScreen() {
                 <Text style={styles.successText}>Form submitted successfully</Text>
               </View>
             ) : null}
-          </View>
-        </View>
-
-        {/* ── Separator ────────────────────────────── */}
-        <View style={styles.separator} />
-
-        {/* ── Screen Navigation ────────────────────── */}
-        <View style={styles.section}>
-          <SectionLabel title="Explore" />
-          <View style={styles.navStack}>
-            <FeatureCard
-              icon="document-text-outline"
-              title="Login Form"
-              description="Chained inputs with Next / Done"
-              onPress={() => router.push('/(tabs)/login')}
-            />
-            <FeatureCard
-              icon="pulse-outline"
-              title="Hooks & State"
-              description="useKeyboardHeight, useKeyboardState"
-              onPress={() => router.push('/(tabs)/hooks')}
-            />
-            <FeatureCard
-              icon="settings-outline"
-              title="Advanced"
-              description="Imperative ref, callbacks, nextRef"
-              onPress={() => router.push('/(tabs)/advanced')}
-            />
           </View>
         </View>
 

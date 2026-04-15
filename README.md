@@ -157,6 +157,19 @@ import { FieldForm, FieldInput } from 'react-native-fieldflow';
 
 **FieldFlow** subscribes to native keyboard frame events. As the keyboard animates in, an internal `Animated.View` spacer at the bottom of the scroll content grows to match — pushing content up in sync with the keyboard, with no layout recalculation and no white flash.
 
+### 📱 Example App
+
+The included example app (built with Expo Router) contains a **full demo suite** with 11 professional-grade screens demonstrating:
+- **Core Basics**: Login, Multi-field chains, Checkouts with dynamic skipping.
+- **Hooks & Events**: Custom UI lifting with `useKeyboardHeight`, collapsing headers with `useKeyboardVisible`.
+- **Advanced Layouts**: Long forms with `RefreshControl`, zero-config React Navigation integration, and rich `keyboardAccessoryView` toolbars.
+
+To run it:
+```bash
+cd example
+npx expo start
+```
+
 At the same time, every `FieldInput` registers itself into an ordered focus chain. When you tap Next, **FieldFlow** calls `focus()` on the next ref and runs `scrollResponderScrollNativeHandleToKeyboard` to ensure the newly focused field is visible above the keyboard — even accounting for `extraScrollPadding` so it doesn't sit flush against it.
 
 Nothing about this requires native modules. It is entirely JS-side and works on Expo, bare RN, and the New Architecture.
