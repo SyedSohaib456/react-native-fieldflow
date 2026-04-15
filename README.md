@@ -157,6 +157,19 @@ import { FieldForm, FieldInput } from 'react-native-fieldflow';
 
 **FieldFlow** subscribes to native keyboard frame events. As the keyboard animates in, an internal `Animated.View` spacer at the bottom of the scroll content grows to match — pushing content up in sync with the keyboard, with no layout recalculation and no white flash.
 
+### 📱 Example App
+
+The included example app (built with Expo Router) contains a **full demo suite** with 11 professional-grade screens demonstrating:
+- **Core Basics**: Login, Multi-field chains, Checkouts with dynamic skipping.
+- **Hooks & Events**: Custom UI lifting with `useKeyboardHeight`, collapsing headers with `useKeyboardVisible`.
+- **Advanced Layouts**: Long forms with `RefreshControl`, zero-config React Navigation integration, and rich `keyboardAccessoryView` toolbars.
+
+To run it:
+```bash
+cd example
+npx expo start
+```
+
 At the same time, every `FieldInput` registers itself into an ordered focus chain. When you tap Next, **FieldFlow** calls `focus()` on the next ref and runs `scrollResponderScrollNativeHandleToKeyboard` to ensure the newly focused field is visible above the keyboard — even accounting for `extraScrollPadding` so it doesn't sit flush against it.
 
 Nothing about this requires native modules. It is entirely JS-side and works on Expo, bare RN, and the New Architecture.
@@ -173,13 +186,19 @@ Nothing about this requires native modules. It is entirely JS-side and works on 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `onSubmit` | `() => void` | — | Called when the last field is submitted |
-| `extraScrollPadding` | `number` | `40` | Space between the active field and the keyboard top edge |
+| `extraScrollPadding` | `number` | `50` | Space between the active field and the keyboard top edge |
 | `scrollable` | `boolean` | `true` | Wrap children in a managed ScrollView |
 | `avoidKeyboard` | `boolean` | `true` | Enable the animated keyboard spacer |
-| `submitOnLastFieldDone` | `boolean` | `false` | Submit the whole form / call `onSubmit` when "Done" is pressed on the final field |
-| `style` | `ViewStyle` | — | Container style |
+| `keyboardAccessoryView` | `ReactNode` | — | Cross-platform view that hovers above the keyboard on both iOS and Android, animated in sync with the keyboard |
+| `keyboardAccessoryViewMode` | `'always' \| 'whenKeyboardOpen'` | `'always'` | `'always'` — bar stays on screen at all times and lifts up; `'whenKeyboardOpen'` — bar is hidden when keyboard is closed, appears and lifts in sync when keyboard opens |
+| `autoScroll` | `boolean` | `true` | Automatically scroll to the focused field |
+| `chainEnabled` | `boolean` | `true` | Auto-focus next field on Next / Done |
+| `autoReturnKeyType` | `boolean` | `true` | Automatically set `returnKeyType` to `next` / `done` |
+| `dismissKeyboardOnTap` | `boolean` | `false` | Tapping outside any input dismisses the keyboard |
+| `submitOnLastFieldDone` | `boolean` | `false` | Submit when Done is pressed on the final field |
 | `scrollViewProps` | `ScrollViewProps` | — | Forwarded to the internal ScrollView |
-| `onKeyboardShow` | `(height: number) => void` | — | Called when keyboard appears |
+| `keyboardVerticalOffset` | `number \| (platform) => number` | `0 / 25` | Static offset or per-platform resolver |
+| `onKeyboardShow` | `(payload) => void` | — | Called when keyboard appears |
 | `onKeyboardHide` | `() => void` | — | Called when keyboard dismisses |
 
 ### `<FieldInput>`
@@ -191,6 +210,57 @@ Accepts every `TextInput` prop, plus:
 | `skip` | `boolean` | `false` | Exclude this field from the auto-focus chain entirely |
 | `nextRef` | `RefObject<TextInput>` | — | Override: focus this ref instead of the auto-detected next field |
 | `onFormSubmit` | `() => void` | — | Override: called when this field is the last and Done is tapped |
+
+---
+
+## Keyboard Accessory View
+
+`keyboardAccessoryView` renders a cross-platform toolbar that floats above the keyboard and animates in **perfect sync** with it on both iOS and Android.
+
+**Professional-grade animations:**
+- **Show**: Uses a custom **exponential ease-out** curve that frontloads the motion, ensuring the bar settles exactly when the keyboard spring does — no trailing or "pushed" movement.
+- **Hide (Always)**: When the keyboard closes in `always` mode, the bar uses a **spring with a subtle bounce** to settle back at the bottom, creating a natural gravity-drop feel.
+- **Hide (WhenOpen)**: Stays timed with the keyboard's own dismiss animation for a coordinated exit.
+- **Auto-Offset**: The component automatically detects if it's inside a Tab Bar or has other bottom insets and subtracts them from the keyboard height, so the bar always docks flush with the top of the keyboard.
+
+The accessory height is measured automatically and injected as `paddingBottom` into the `ScrollView` so that the last field is always scrollable above the bar.
+
+```tsx
+<FieldForm
+  keyboardAccessoryView={
+    <View style={styles.toolbar}>
+      <TouchableOpacity onPress={Keyboard.dismiss}>
+        <Text>Done</Text>
+      </TouchableOpacity>
+    </View>
+  }
+>
+  <FieldInput placeholder="Message..." />
+</FieldForm>
+```
+
+### `keyboardAccessoryViewMode`
+
+| Value | Behaviour |
+|-------|-----------|
+| `'always'` *(default)* | Bar always visible at the bottom; slides up when keyboard opens and back down when it closes |
+| `'whenKeyboardOpen'` | Bar is hidden when no keyboard is shown; fades in and slides up as keyboard opens; fades out and slides down as keyboard closes |
+
+```tsx
+// Bar is always visible — use for persistent action bars / send buttons
+<FieldForm
+  keyboardAccessoryView={<Toolbar />}
+  keyboardAccessoryViewMode="always"
+/>
+
+// Bar only appears with the keyboard — use for formatting toolbars
+<FieldForm
+  keyboardAccessoryView={<Toolbar />}
+  keyboardAccessoryViewMode="whenKeyboardOpen"
+/>
+```
+
+---
 
 ### Hooks
 

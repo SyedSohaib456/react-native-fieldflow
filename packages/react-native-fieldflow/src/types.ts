@@ -63,6 +63,20 @@ export interface FieldFormProps {
   dismissKeyboardOnTap?: boolean;
 
   /**
+   * Render a cross-platform view that hovers right above the keyboard consistently
+   * on both iOS and Android. It sits at the bottom of the container and moves up 
+   * when the keyboard is shown. Useful for toolbars or submit buttons.
+   */
+  keyboardAccessoryView?: ReactNode;
+
+  /**
+   * Controls when the `keyboardAccessoryView` is visible:
+   * - `'always'` — always visible, floats up when keyboard opens (default)
+   * - `'whenKeyboardOpen'` — only visible while the keyboard is shown
+   */
+  keyboardAccessoryViewMode?: 'whenKeyboardOpen' | 'always';
+
+  /**
    * Replace the default `ScrollView` (e.g. `KeyboardAwareScrollView`).
    * Must forward `ref` to a scroll view that implements `scrollResponderScrollNativeHandleToKeyboard`.
    */

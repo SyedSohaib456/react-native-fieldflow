@@ -47,6 +47,7 @@ export default function HooksScreen() {
   const [showVisible, setShowVisible] = useState(true);
   const [showState, setShowState] = useState(true);
   const [showSubscribe, setShowSubscribe] = useState(true);
+  const [accessoryMode, setAccessoryMode] = useState<'always' | 'whenKeyboardOpen'>('whenKeyboardOpen');
 
   // ── Imperative subscription ─────────────────────────
   const [events, setEvents] = useState<string[]>([]);
@@ -88,8 +89,18 @@ export default function HooksScreen() {
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <FieldForm
-        extraScrollPadding={100}
+        extraScrollPadding={0}
         keyboardVerticalOffset={0}
+        keyboardAccessoryViewMode={accessoryMode}
+        keyboardAccessoryView={
+          <View style={styles.accessoryBar}>
+            <Ionicons name={visible ? 'close-circle-outline' : 'keyboard-outline'} size={18} color="#fff" />
+            <Text style={styles.accessoryText}>
+              {visible ? 'Keyboard open · tap to dismiss' : 'Tap a field to open keyboard'}
+            </Text>
+            <Text style={styles.accessoryMode}>{accessoryMode}</Text>
+          </View>
+        }
         scrollViewProps={{
           contentContainerStyle: styles.scrollContent,
           keyboardDismissMode: 'interactive',
@@ -136,6 +147,21 @@ export default function HooksScreen() {
               onToggle={setShowSubscribe}
             />
           </View>
+        </View>
+
+        {/* ── Accessory View Mode ───────────────────── */}
+        <View style={styles.section}>
+          <SectionLabel
+            title="Keyboard Accessory"
+            description="Controls when the bar above the keyboard appears"
+          />
+          <FeatureCard
+            icon="browsers-outline"
+            title="Always visible"
+            description={accessoryMode === 'always' ? 'Bar stays on screen at all times' : 'Bar only shows with keyboard'}
+            toggleValue={accessoryMode === 'always'}
+            onToggle={(v) => setAccessoryMode(v ? 'always' : 'whenKeyboardOpen')}
+          />
         </View>
 
         {/* ── Metrics ──────────────────────────────── */}
@@ -269,6 +295,28 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     // marginBottom spacer now handled by KeyboardForm
+  },
+
+  // Accessory bar
+  accessoryBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.accent,
+    paddingHorizontal: ShowcaseSpacing.lg,
+    paddingVertical: ShowcaseSpacing.md,
+    gap: ShowcaseSpacing.sm,
+  },
+  accessoryText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  accessoryMode: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.7)',
+    fontVariant: ['tabular-nums' as const],
   },
 
   header: {
