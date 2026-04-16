@@ -15,6 +15,7 @@ import {
   findNodeHandle,
   Keyboard,
   KeyboardAvoidingView,
+  LayoutAnimation,
   Platform,
   ScrollView,
   StyleSheet,
@@ -23,47 +24,6 @@ import {
   type ScrollViewProps,
   type TextInput,
 } from 'react-native';
-
-let AnimatedReanimatedView: any;
-let useAnimatedKeyboard: any;
-let useAnimatedStyle: any;
-let isReanimatedAvailable = false;
-
-try {
-  const rea = require('react-native-reanimated');
-  useAnimatedKeyboard = rea.useAnimatedKeyboard;
-  useAnimatedStyle = rea.useAnimatedStyle;
-  const createAnimatedComponent = rea.createAnimatedComponent;
-  // createAnimatedComponent(View) is the canonical way to get an Animated View
-  // that actually drives Reanimated animated styles on the UI thread.
-  if (useAnimatedKeyboard && useAnimatedStyle && createAnimatedComponent) {
-    AnimatedReanimatedView = createAnimatedComponent(View);
-    isReanimatedAvailable = true;
-  }
-} catch (e) {
-  // gracefully degrade to Animated.timing if not found
-}
-
-// ReanimatedSpacer — used only for the scroll content spacer (not the accessory)
-const ReanimatedSpacer = ({
-  avoidKeyboard,
-  offset,
-  extraPad,
-}: {
-  avoidKeyboard: boolean;
-  offset: number;
-  extraPad: number;
-}) => {
-  const keyboard = useAnimatedKeyboard();
-  const animatedStyle = useAnimatedStyle(() => {
-    const kHeight = avoidKeyboard ? keyboard.height.value : 0;
-    const finalHeight = kHeight > 0 ? Math.max(kHeight + offset, 0) : 0;
-    return { height: finalHeight + extraPad };
-  }, [avoidKeyboard, offset, extraPad]);
-
-  const AnimatedView = AnimatedReanimatedView;
-  return <AnimatedView style={animatedStyle} />;
-};
 
 // NOTE: ReanimatedAccessory has been intentionally removed.
 // The keyboard accessory view is now animated with a dedicated Animated.timing
@@ -128,11 +88,14 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
     keyboardAccessoryView,
     keyboardAccessoryViewMode = 'always',
     scrollViewRef: scrollViewRefProp,
+    resetScrollOnKeyboardHide = false,
   } = props;
 
   const fieldsRef = useRef<{ ref: React.MutableRefObject<TextInput | null>; skip?: boolean }[]>([]);
   const internalScrollRef = useRef<ScrollView | null>(null);
   const [accessoryHeight, setAccessoryHeight] = React.useState(0);
+  /** Drives bottom padding for accessory when mode is `whenKeyboardOpen` (clears when keyboard closes). */
+  const [keyboardOpen, setKeyboardOpen] = React.useState(false);
 
   // Ref to the outermost wrapper View — used to measure how far the container
   // bottom sits above the real screen bottom (e.g. tab bar height).
@@ -149,12 +112,18 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
 
   const setMergedScrollRef = useCallback(
     (node: ScrollView | null) => {
-      internalScrollRef.current = node;
+      const next = node ?? null;
+      internalScrollRef.current = next;
       if (!scrollViewRefProp) return;
-      if (typeof scrollViewRefProp === 'function') {
-        scrollViewRefProp(node);
-      } else {
-        (scrollViewRefProp as React.MutableRefObject<ScrollView | null>).current = node;
+      try {
+        if (typeof scrollViewRefProp === 'function') {
+          scrollViewRefProp(next);
+        } else {
+          (scrollViewRefProp as React.MutableRefObject<ScrollView | null>).current =
+            next;
+        }
+      } catch {
+        // Parent passed a read-only / frozen ref (e.g. some RN + Reanimated paths).
       }
     },
     [scrollViewRefProp],
@@ -383,30 +352,82 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
       keyboardHideEvent ?? (Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide');
 
     const showSub = Keyboard.addListener(showEvent, e => {
+      setKeyboardOpen(true);
       const h = e.endCoordinates.height;
       const offset = resolveKeyboardVerticalOffset(keyboardVerticalOffset);
       const finalHeight = Math.max(h + offset, 0);
 
-      // Only needed when Reanimated is NOT available (content spacer fallback)
-      if (!isReanimatedAvailable && avoidKeyboard) {
-        Animated.timing(animatedMargin, {
-          toValue: finalHeight,
-          duration: e.duration || 250,
-          easing: Easing.out(Easing.poly(4)),
-          useNativeDriver: false,
-        }).start();
+      // Scroll bottom spacer (non‑iOS, or iOS when not using the static spacer below).
+      // Avoid useAnimatedKeyboard here — it can throw on New Architecture (frozen ref).
+      if (avoidKeyboard) {
+        if (Platform.OS === 'ios') {
+          // Spacer height is fixed on iOS; animating this value still costs JS frames.
+          animatedMargin.setValue(0);
+        } else {
+          Animated.timing(animatedMargin, {
+            toValue: finalHeight,
+            duration: e.duration || 250,
+            easing: Easing.out(Easing.poly(4)),
+            useNativeDriver: false,
+          }).start();
+        }
       }
       onKeyboardShow?.({ height: h, event: e });
     });
 
     const hideSub = Keyboard.addListener(hideEvent, e => {
-      if (!isReanimatedAvailable && avoidKeyboard) {
-        Animated.timing(animatedMargin, {
-          toValue: 0,
-          duration: e?.duration || 250,
-          easing: Easing.out(Easing.poly(4)),
-          useNativeDriver: false,
-        }).start();
+      const hideDuration = e?.duration || 250;
+      const hideEasing =
+        Platform.OS === 'ios'
+          ? Easing.bezier(0.42, 0, 1, 1)
+          : Easing.out(Easing.cubic);
+
+      const deferAccessoryPadClear =
+        Boolean(keyboardAccessoryView) &&
+        keyboardAccessoryViewMode === 'whenKeyboardOpen';
+
+      const applyKeyboardClosedLayout = () => {
+        if (Platform.OS === 'ios' && deferAccessoryPadClear) {
+          LayoutAnimation.configureNext({
+            ...LayoutAnimation.Presets.easeInEaseOut,
+            duration: Math.min(hideDuration, 280),
+          });
+        }
+        setKeyboardOpen(false);
+      };
+
+      if (resetScrollOnKeyboardHide && scrollable) {
+        const scroll = internalScrollRef.current;
+        if (scroll) {
+          // Same frame as keyboard hide — avoids an extra rAF of latency.
+          scroll.scrollTo({ x: 0, y: 0, animated: false });
+        }
+      }
+
+      if (!deferAccessoryPadClear) {
+        applyKeyboardClosedLayout();
+      }
+
+      if (avoidKeyboard) {
+        if (Platform.OS === 'ios') {
+          animatedMargin.setValue(0);
+          if (deferAccessoryPadClear) {
+            applyKeyboardClosedLayout();
+          }
+        } else {
+          Animated.timing(animatedMargin, {
+            toValue: 0,
+            duration: hideDuration,
+            easing: hideEasing,
+            useNativeDriver: false,
+          }).start(() => {
+            if (deferAccessoryPadClear) {
+              applyKeyboardClosedLayout();
+            }
+          });
+        }
+      } else if (deferAccessoryPadClear) {
+        applyKeyboardClosedLayout();
       }
       onKeyboardHide?.();
     });
@@ -422,6 +443,10 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
     keyboardHideEvent,
     onKeyboardShow,
     onKeyboardHide,
+    resetScrollOnKeyboardHide,
+    scrollable,
+    keyboardAccessoryView,
+    keyboardAccessoryViewMode,
   ]);
 
   const ctx = useMemo(
@@ -466,11 +491,17 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
     ...kavRest
   } = keyboardAvoidingViewProps ?? {};
 
+  const useAccessoryBottomPad =
+    Boolean(keyboardAccessoryView) &&
+    (keyboardAccessoryViewMode === 'always' || keyboardOpen);
+
   const mergedContentContainerStyle = [
     applyDefaultScrollContentFlexGrow ? styles.scrollContent : null,
     contentContainerStyle,
     scrollContentFromProps,
-    keyboardAccessoryView ? { paddingBottom: accessoryHeight } : null,
+    useAccessoryBottomPad && accessoryHeight > 0
+      ? { paddingBottom: accessoryHeight }
+      : null,
   ];
 
   const kavBehavior =
@@ -494,14 +525,15 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
           {children}
           {Platform.OS === 'ios' && avoidKeyboard ? (
             <View style={{ height: extraScrollPadding }} />
-          ) : isReanimatedAvailable ? (
-            <ReanimatedSpacer
-              avoidKeyboard={avoidKeyboard}
-              offset={kavOffset}
-              extraPad={typeof extraScrollPadding === 'number' ? extraScrollPadding : 0}
-            />
           ) : (
-            <Animated.View style={{ height: Animated.add(extraScrollPadding, animatedMargin) }} />
+            <Animated.View
+              style={{
+                height: Animated.add(
+                  typeof extraScrollPadding === 'number' ? extraScrollPadding : 0,
+                  animatedMargin,
+                ),
+              }}
+            />
           )}
         </>
       ),

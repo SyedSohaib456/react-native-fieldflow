@@ -132,6 +132,13 @@ export interface FieldFormProps {
    * (e.g. when `ScrollViewComponent` manages ref externally).
    */
   scrollViewRef?: Ref<ScrollView | null>;
+
+  /**
+   * After the keyboard hides, scroll the form `ScrollView` back to the top (`y: 0`).
+   * Use for short forms; leave false for long scrollable content.
+   * @default false
+   */
+  resetScrollOnKeyboardHide?: boolean;
 }
 
 export interface FieldInputProps extends TextInputProps {
