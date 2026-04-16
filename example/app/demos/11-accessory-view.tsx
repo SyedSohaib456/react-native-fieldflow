@@ -133,7 +133,7 @@ export default function AccessoryViewDemo() {
 
         <View style={styles.comparisonNote}>
             <Text style={styles.compNoteText}>
-                <Text style={styles.bold}>Without this prop:</Text> You'd need useKeyboardHeight() + Animated.View marginBottom (8+ lines).
+                <Text style={styles.bold}>Without this prop:</Text> You&apos;d need useKeyboardHeight() + Animated.View marginBottom (8+ lines).
             </Text>
             <Text style={styles.compNoteText}>
                 <Text style={styles.bold}>With FieldFlow:</Text> Handled with a single prop. 0 extra lines.
