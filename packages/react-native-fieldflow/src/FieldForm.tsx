@@ -267,20 +267,22 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
   const animatedMargin = useRef(new Animated.Value(0)).current;
 
   // ─── Dedicated accessory animation ────────────────────────────────
-  // Uses Animated.timing driven by keyboard events (not useAnimatedKeyboard)
-  // so it ALWAYS tracks the keyboard in precise sync, regardless of whether
-  // Reanimated worklets are running on the UI thread.
+  // Animate translateY with useNativeDriver so motion stays on the UI thread.
+  // Negative translateY moves the bar up with the keyboard (anchored at bottom: 0).
   //
   // iOS:  keyboardWillShow / keyboardWillHide   (fire before animation starts)
   // Android: keyboardDidShow / keyboardDidHide   (fire after animation)
   // In both cases we use e.duration to match the keyboard's own timing.
-  const accessoryMargin = useRef(new Animated.Value(0)).current;
+  const accessoryTranslateY = useRef(new Animated.Value(0)).current;
   const accessoryOpacity = useRef(
     new Animated.Value(keyboardAccessoryViewMode === 'whenKeyboardOpen' ? 0 : 1)
   ).current;
 
+  const hasKeyboardAccessory =
+    keyboardAccessoryView != null && keyboardAccessoryView !== false;
+
   useEffect(() => {
-    if (!keyboardAccessoryView) return;
+    if (!hasKeyboardAccessory) return;
 
     // Always use Will-events on iOS so animation starts in sync;
     // Did-events on Android where Will-events don't exist.
@@ -305,11 +307,11 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
       const adjustedH = Math.max(h - bottomOffsetRef.current, 0);
 
       const animations: Animated.CompositeAnimation[] = [
-        Animated.timing(accessoryMargin, {
-          toValue: adjustedH,
+        Animated.timing(accessoryTranslateY, {
+          toValue: -adjustedH,
           duration: dur,
           easing,
-          useNativeDriver: false,
+          useNativeDriver: true,
         }),
       ];
       if (keyboardAccessoryViewMode === 'whenKeyboardOpen') {
@@ -319,7 +321,7 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
             // Fade in quickly at the start of the keyboard animation
             duration: Math.min(dur * 0.25, 80),
             easing: Easing.out(Easing.quad),
-            useNativeDriver: false,
+            useNativeDriver: true,
           })
         );
       }
@@ -328,40 +330,36 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
 
     const accHideSub = Keyboard.addListener(accHideEvent, e => {
       const dur = e?.duration || 250;
+      const hideTranslateEasing =
+        Platform.OS === 'ios'
+          ? Easing.bezier(0.42, 0, 1, 1)
+          : Easing.in(Easing.ease);
 
       if (keyboardAccessoryViewMode === 'always') {
-        // ── 'always' mode ──────────────────────────────────────────────
-        // The bar doesn't need to track the keyboard going down at all.
-        // Use a spring so it feels like a natural gravity drop:
-        //   - damping < criticalDamping → slightly underdamped → subtle
-        //     bounce when it lands at bottom (like something settling).
-        //   - Completely independent of the keyboard's easing/duration.
-        Animated.spring(accessoryMargin, {
+        // Match keyboard dismiss so the toolbar doesn't "float" on its own spring.
+        Animated.timing(accessoryTranslateY, {
           toValue: 0,
-          damping: 14,       // < 2*sqrt(160*1) ≈ 25.3  →  underdamped ~ζ 0.55
-          stiffness: 160,
-          mass: 1,
-          overshootClamping: true,  // allow the small landing bounce
-          restDisplacementThreshold: 0.5,
-          restSpeedThreshold: 0.5,
-          useNativeDriver: false,
+          duration: dur,
+          easing: hideTranslateEasing,
+          useNativeDriver: true,
         }).start();
       } else {
         // ── 'whenKeyboardOpen' mode ────────────────────────────────────
-        // Bar must disappear while the keyboard is dismissed, so stay
-        // timed with the keyboard event duration.
+        // Keep opacity in sync with translateY on hide. A short opacity-only
+        // window (e.g. 80ms) makes the bar vanish before the slide finishes,
+        // so it reads as "fade only" instead of moving down with the keyboard.
         Animated.parallel([
-          Animated.timing(accessoryMargin, {
+          Animated.timing(accessoryTranslateY, {
             toValue: 0,
             duration: dur,
-            easing: Easing.in(Easing.quad),
-            useNativeDriver: false,
+            easing: hideTranslateEasing,
+            useNativeDriver: true,
           }),
           Animated.timing(accessoryOpacity, {
             toValue: 0,
-            duration: Math.min(dur * 0.25, 80),
-            easing: Easing.in(Easing.quad),
-            useNativeDriver: false,
+            duration: dur,
+            easing: hideTranslateEasing,
+            useNativeDriver: true,
           }),
         ]).start();
       }
@@ -372,9 +370,9 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
       accHideSub.remove();
     };
   }, [
-    keyboardAccessoryView,
+    hasKeyboardAccessory,
     keyboardAccessoryViewMode,
-    accessoryMargin,
+    accessoryTranslateY,
     accessoryOpacity,
   ]);
   // ──────────────────────────────────────────────────────────────────
@@ -542,7 +540,10 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
           <Animated.View
             style={[
               styles.accessory,
-              { bottom: accessoryMargin },
+              {
+                bottom: 0,
+                transform: [{ translateY: accessoryTranslateY }],
+              },
               keyboardAccessoryViewMode === 'whenKeyboardOpen'
                 ? { opacity: accessoryOpacity }
                 : null,
