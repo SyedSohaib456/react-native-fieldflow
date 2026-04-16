@@ -345,9 +345,8 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
         }).start();
       } else {
         // ── 'whenKeyboardOpen' mode ────────────────────────────────────
-        // Keep opacity in sync with translateY on hide. A short opacity-only
-        // window (e.g. 80ms) makes the bar vanish before the slide finishes,
-        // so it reads as "fade only" instead of moving down with the keyboard.
+        // Bar must disappear while the keyboard is dismissed, so stay
+        // timed with the keyboard event duration.
         Animated.parallel([
           Animated.timing(accessoryTranslateY, {
             toValue: 0,
@@ -357,8 +356,8 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
           }),
           Animated.timing(accessoryOpacity, {
             toValue: 0,
-            duration: dur,
-            easing: hideTranslateEasing,
+            duration: Math.min(dur * 0.25, 80),
+            easing: Easing.in(Easing.quad),
             useNativeDriver: true,
           }),
         ]).start();
