@@ -149,9 +149,9 @@ import { FieldForm, FieldInput } from 'react-native-fieldflow';
 
 ## How it works
 
-<div align="center">
+<!-- <div align="center">
 <img src="media/architecture.png" width="580" alt="FieldFlow internals diagram" />
-</div>
+</div> -->
 
 <br/>
 

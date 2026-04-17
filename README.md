@@ -5,7 +5,7 @@
 <br/>
 <br/>
 
-**The keyboard form library React Native should have shipped with.**
+**The high-performance keyboard avoidance and focus management library React Native should have shipped with.**
 
 <br/>
 
@@ -15,7 +15,20 @@
 
 <br/>
 
+**react-native-fieldflow** provides a professional-grade, zero-config solution for the three biggest pain points in React Native forms: **Keyboard Avoidance**, **Focus Management (Chaining)**, and **Synced Accessory Views**.
+
+<br/>
+
 > **Zero refs &nbsp;·&nbsp; Zero platform switches &nbsp;·&nbsp; Zero boilerplate**
+
+<br/>
+
+### 🚀 Core MVP Features:
+- **Automatic Next-Field Focusing**: Effortless input chaining without manual refs.
+- **"Ref to Next" Automation**: Zero-config focus transition from field to field.
+- **Synced Accessory Views**: Cross-platform toolbars that move in perfect harmony with the keyboard.
+- **Native Keyboard Avoidance**: Smooth, 60fps layout adjustments using Reanimated worklets.
+- **Expo Compatible**: Works out-of-the-box with Expo and bare workflows.
 
 <br/>
 
@@ -149,9 +162,9 @@ import { FieldForm, FieldInput } from 'react-native-fieldflow';
 
 ## How it works
 
-<div align="center">
+<!-- <div align="center">
 <img src="media/architecture.png" width="580" alt="FieldFlow internals diagram" />
-</div>
+</div> -->
 
 <br/>
 

@@ -1,9 +1,11 @@
 {
   "name": "react-native-fieldflow",
+  "displayName": "FieldFlow",
   "version": "1.1.4",
-  "description": "High-performance field flow (keyboard avoidance + focus chaining) for React Native.",
+  "description": "High-performance React Native keyboard avoidance and zero-config focus chaining. Effortlessly manage form flows with 'ref to next' automation, high-speed focus transitions, and synced accessory views.",
   "main": "src/index.ts",
   "types": "src/index.ts",
+  "sideEffects": false,
   "files": [
     "src",
     "README.md",
@@ -19,7 +21,27 @@
     "avoidance",
     "scrollview",
     "form",
-    "fieldflow"
+    "fieldflow",
+    "reanimated",
+    "focus-management",
+    "ref to next",
+    "focusing next field",
+    "keyboard-avoidance",
+    "form-flow",
+    "autofocus",
+    "ios",
+    "android",
+    "expo-compatible",
+    "smooth-scrolling",
+    "keyboard-avoiding-view",
+    "keyboard-accessory",
+    "input-focus",
+    "form-management",
+    "react-native-form",
+    "keyboard-manager",
+    "input-chaining",
+    "automatic-focus",
+    "textinput-focus"
   ],
   "author": "Syed Sohaib",
   "license": "MIT",
@@ -44,5 +66,11 @@
     "react": "19.1.0",
     "react-native": "0.81.5",
     "typescript": "~5.9.2"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
