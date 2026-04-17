@@ -9,7 +9,8 @@
   "files": [
     "src",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "media"
   ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",

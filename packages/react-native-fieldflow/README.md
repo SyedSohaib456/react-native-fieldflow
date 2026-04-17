@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="media/logo.png" alt="react-native-fieldflow" width="360" />
+<img src="https://raw.githubusercontent.com/SyedSohaib456/react-native-fieldflow/main/media/logo.png" alt="react-native-fieldflow" width="360" />
 
 <br/>
 <br/>
@@ -162,9 +162,9 @@ import { FieldForm, FieldInput } from 'react-native-fieldflow';
 
 ## How it works
 
-<!-- <div align="center">
-<img src="media/architecture.png" width="580" alt="FieldFlow internals diagram" />
-</div> -->
+<div align="center">
+<img src="https://raw.githubusercontent.com/SyedSohaib456/react-native-fieldflow/main/media/architecture.png" width="580" alt="FieldFlow architecture diagram" />
+</div>
 
 <br/>
 
