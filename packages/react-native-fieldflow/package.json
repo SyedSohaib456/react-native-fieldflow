@@ -1,7 +1,7 @@
 {
   "name": "react-native-fieldflow",
   "displayName": "FieldFlow",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "High-performance React Native keyboard avoidance and zero-config focus chaining. Effortlessly manage form flows with 'ref to next' automation, high-speed focus transitions, and synced accessory views.",
   "main": "src/index.ts",
   "types": "src/index.ts",
