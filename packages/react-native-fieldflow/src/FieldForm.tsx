@@ -273,7 +273,7 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
       // height). Keyboard height is in screen coords; our `bottom` prop is in
       // container coords — without this the bar floats above the keyboard by exactly
       // the tab bar height.
-      const adjustedH = Math.max(h - bottomOffsetRef.current, 0);
+      const adjustedH = Platform.OS === 'ios' ? Math.max(h - bottomOffsetRef.current, 0) :h;
 
       const animations: Animated.CompositeAnimation[] = [
         Animated.timing(accessoryTranslateY, {
