@@ -6,10 +6,12 @@
   "types": "src/index.ts",
   "files": [
     "src",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepublishOnly": "cp ../../README.md . && cp ../../LICENSE ."
   },
   "keywords": [
     "react-native",
@@ -21,6 +23,15 @@
   ],
   "author": "Syed Sohaib",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SyedSohaib456/react-native-fieldflow.git",
+    "directory": "packages/react-native-fieldflow"
+  },
+  "bugs": {
+    "url": "https://github.com/SyedSohaib456/react-native-fieldflow/issues"
+  },
+  "homepage": "https://github.com/SyedSohaib456/react-native-fieldflow#readme",
   "peerDependencies": {
     "react": ">=16.8.0",
     "react-native": "*",
