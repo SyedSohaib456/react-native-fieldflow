@@ -360,7 +360,7 @@ function SubmitButton() {
 <td align="left"><span style="display:inline-flex;align-items:center;gap:5px">❌ <span>Manual</span></span></td>
 <td align="left"><span style="display:inline-flex;align-items:center;gap:5px">❌ <span>Manual</span></span></td>
 <td align="left"><span style="display:inline-flex;align-items:center;gap:5px">❌ <span>Manual</span></span></td>
-<td align="left"><b><span style="display:inline-flex;align-items:center;gap:5px">✅ <span>Automatic</span></span></b></td>
+<td align="left"><b><span style="display:inline-flex;align-items:center;gap:5px">✅ <span>Auto</span></span></b></td>
 </tr>
 <tr>
 <td>Ref management</td>
