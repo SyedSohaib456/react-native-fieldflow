@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, Alert } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { 
-  FieldForm, 
-  FieldInput 
+import React, { useState } from 'react';
+import { Alert, StyleSheet, Text, View } from 'react-native';
+import {
+  FieldForm,
+  FieldInput
 } from '../../../packages/react-native-fieldflow/src';
-import { ShowcaseColors as C, ShowcaseSpacing, ShowcaseRadius } from '../../constants/showcase-theme';
 import { ActionButton, IconButton } from '../../components/showcase';
+import { ShowcaseColors as C, ShowcaseRadius, ShowcaseSpacing } from '../../constants/showcase-theme';
 
 export default function SignupDemo() {
   const router = useRouter();
@@ -20,10 +20,10 @@ export default function SignupDemo() {
     <View style={styles.indicatorContainer}>
       <View style={styles.stepsRow}>
         {[1, 2, 3, 4, 5].map((step, idx) => (
-          <View 
-            key={step} 
+          <View
+            key={step}
             style={[
-              styles.stepCircle, 
+              styles.stepCircle,
               activeIndex === idx && styles.stepCircleActive
             ]}
           >
@@ -40,20 +40,20 @@ export default function SignupDemo() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen 
-        options={{ 
+      <Stack.Screen
+        options={{
           headerLeft: () => (
-            <IconButton 
-              icon="chevron-back" 
-              onPress={() => router.back()} 
+            <IconButton
+              icon="chevron-back"
+              onPress={() => router.back()}
             />
           ),
-        }} 
+        }}
       />
 
-      <FieldForm 
+      <FieldForm
         onSubmit={handleSubmit}
-        extraScrollPadding={100}
+        extraScrollPadding={140}
         keyboardVerticalOffset={0}
         scrollViewProps={{
           contentContainerStyle: styles.scrollContent,
@@ -61,8 +61,8 @@ export default function SignupDemo() {
         }}
       >
         <View style={styles.header}>
-            <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Demonstrating the zero-ref focus chain.</Text>
+          <Text style={styles.title}>Create Account</Text>
+          <Text style={styles.subtitle}>Demonstrating the zero-ref focus chain.</Text>
         </View>
 
         {renderStepIndicator()}
@@ -70,9 +70,10 @@ export default function SignupDemo() {
         <View style={styles.form}>
           <View style={styles.inputWrapper}>
             <Text style={styles.label}>Full Name</Text>
-            <FieldInput 
+            <FieldInput
               placeholder="Jane Doe"
               textContentType="name"
+              placeholderTextColor={styles.placeholderColor.color}
               onFocus={() => setActiveIndex(0)}
               style={[styles.input, activeIndex === 0 && styles.inputActive]}
             />
@@ -80,10 +81,11 @@ export default function SignupDemo() {
 
           <View style={styles.inputWrapper}>
             <Text style={styles.label}>Email Address</Text>
-            <FieldInput 
+            <FieldInput
               placeholder="jane@example.com"
               keyboardType="email-address"
               autoCapitalize="none"
+              placeholderTextColor={styles.placeholderColor.color}
               textContentType="emailAddress"
               onFocus={() => setActiveIndex(1)}
               style={[styles.input, activeIndex === 1 && styles.inputActive]}
@@ -92,9 +94,10 @@ export default function SignupDemo() {
 
           <View style={styles.inputWrapper}>
             <Text style={styles.label}>Phone Number</Text>
-            <FieldInput 
+            <FieldInput
               placeholder="+1 (555) 000-0000"
               keyboardType="phone-pad"
+              placeholderTextColor={styles.placeholderColor.color}
               textContentType="telephoneNumber"
               onFocus={() => setActiveIndex(2)}
               style={[styles.input, activeIndex === 2 && styles.inputActive]}
@@ -103,10 +106,11 @@ export default function SignupDemo() {
 
           <View style={styles.inputWrapper}>
             <Text style={styles.label}>Password</Text>
-            <FieldInput 
+            <FieldInput
               placeholder="Choose a password"
-              secureTextEntry
-              textContentType="newPassword"
+              // secureTextEntry
+              placeholderTextColor={styles.placeholderColor.color}
+              // textContentType="newPassword"
               onFocus={() => setActiveIndex(3)}
               style={[styles.input, activeIndex === 3 && styles.inputActive]}
             />
@@ -114,21 +118,22 @@ export default function SignupDemo() {
 
           <View style={styles.inputWrapper}>
             <Text style={styles.label}>Confirm Password</Text>
-            <FieldInput 
+            <FieldInput
               placeholder="Repeat password"
-              secureTextEntry
-              textContentType="newPassword"
+              // secureTextEntry
+              placeholderTextColor={styles.placeholderColor.color}
+              // textContentType="newPassword"
               onFocus={() => setActiveIndex(4)}
               style={[styles.input, activeIndex === 4 && styles.inputActive]}
             />
           </View>
 
-          <ActionButton 
-            title="Create Account" 
-            onPress={handleSubmit} 
+          <ActionButton
+            title="Create Account"
+            onPress={handleSubmit}
             style={styles.submitButton}
           />
-          
+
           <View style={styles.callout}>
             <Text style={styles.calloutTitle}>The Selling Point</Text>
             <Text style={styles.calloutText}>
@@ -233,6 +238,9 @@ const styles = StyleSheet.create({
     color: C.textPrimary,
     borderWidth: 1,
     borderColor: C.borderSubtle,
+  },
+  placeholderColor: {
+    color: C.textSecondary,
   },
   inputActive: {
     borderColor: C.accent,

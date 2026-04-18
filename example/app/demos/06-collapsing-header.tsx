@@ -1,22 +1,22 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { StyleSheet, Text, View, Animated, Platform, TouchableOpacity, FlatList } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { 
-  FieldForm, 
+import { Stack, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  FieldForm,
   FieldInput,
   useKeyboardVisible
 } from '../../../packages/react-native-fieldflow/src';
-import { ShowcaseColors as C, ShowcaseSpacing, ShowcaseRadius } from '../../constants/showcase-theme';
 import { IconButton } from '../../components/showcase';
+import { ShowcaseColors as C, ShowcaseRadius, ShowcaseSpacing } from '../../constants/showcase-theme';
 
 export default function CollapsingHeaderDemo() {
   const router = useRouter();
   const isKeyboardVisible = useKeyboardVisible();
-  
+
   // Header animation values
   const headerAnim = useRef(new Animated.Value(1)).current; // 1 = visible, 0 = hidden
-  
+
   // Event logs state
   const [logs, setLogs] = useState<{ id: string, msg: string, time: string }[]>([]);
 
@@ -35,7 +35,7 @@ export default function CollapsingHeaderDemo() {
 
   const headerHeight = headerAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 180],
+    outputRange: [0, 160],
   });
 
   const headerOpacity = headerAnim.interpolate({
@@ -45,20 +45,15 @@ export default function CollapsingHeaderDemo() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen 
-        options={{ 
-          headerTransparent: true,
+      <Stack.Screen
+        options={{
           headerLeft: () => (
-            <IconButton 
-              icon="close" 
-              onPress={() => router.back()} 
-              color={C.textPrimary}
-            />
+            <IconButton icon="chevron-back" onPress={() => router.back()} />
           ),
-        }} 
+        }}
       />
 
-      <FieldForm 
+      <FieldForm
         onKeyboardShow={(p) => addLog(`Keyboard shown at ${Math.round(p.height)}px`)}
         onKeyboardHide={() => addLog('Keyboard hidden')}
         extraScrollPadding={100}
@@ -69,52 +64,52 @@ export default function CollapsingHeaderDemo() {
         }}
       >
         <Animated.View style={[styles.header, { height: headerHeight, opacity: headerOpacity }]}>
-            <View style={styles.illustration}>
-                <Ionicons name="shield-checkmark" size={60} color={C.accent} />
-            </View>
-            <Text style={styles.title}>Secure Access</Text>
-            <Text style={styles.subtitle}>Header collapses when you start typing.</Text>
+          <View style={styles.illustration}>
+            <Ionicons name="shield-checkmark" size={60} color={C.accent} />
+          </View>
+          <Text style={styles.title}>Secure Access</Text>
+          <Text style={styles.subtitle}>Header collapses when you start typing.</Text>
         </Animated.View>
 
         <View style={styles.form}>
-            <View style={styles.inputWrapper}>
-                <Text style={styles.label}>Email Address</Text>
-                <FieldInput placeholder="user@example.com" style={styles.input} />
-            </View>
-            <View style={styles.inputWrapper}>
-                <Text style={styles.label}>Password</Text>
-                <FieldInput placeholder="••••••••" secureTextEntry style={styles.input} />
-            </View>
-            <View style={styles.inputWrapper}>
-                <Text style={styles.label}>2FA Code</Text>
-                <FieldInput 
-                    placeholder="000000" 
-                    keyboardType="number-pad" 
-                    maxLength={6} 
-                    style={styles.input} 
-                />
-            </View>
+          <View style={styles.inputWrapper}>
+            <Text style={styles.label}>Email Address</Text>
+            <FieldInput placeholder="user@example.com" style={styles.input} />
+          </View>
+          <View style={styles.inputWrapper}>
+            <Text style={styles.label}>Password</Text>
+            <FieldInput placeholder="••••••••" secureTextEntry style={styles.input} />
+          </View>
+          <View style={styles.inputWrapper}>
+            <Text style={styles.label}>2FA Code</Text>
+            <FieldInput
+              placeholder="000000"
+              keyboardType="number-pad"
+              maxLength={6}
+              style={styles.input}
+            />
+          </View>
 
-            <TouchableOpacity style={styles.submitBtn}>
-                <Text style={styles.submitBtnText}>Verify Identity</Text>
-            </TouchableOpacity>
+          <TouchableOpacity style={styles.submitBtn}>
+            <Text style={styles.submitBtnText}>Verify Identity</Text>
+          </TouchableOpacity>
         </View>
 
-        <View style={styles.logSection}>
-            <Text style={styles.logHeader}>Event Listeners:</Text>
-            <View style={styles.logBox}>
-                {logs.length === 0 ? (
-                    <Text style={styles.emptyLog}>No events yet. Try opening the keyboard.</Text>
-                ) : (
-                    logs.map(log => (
-                        <View key={log.id} style={styles.logRow}>
-                            <Text style={styles.logTime}>{log.time}</Text>
-                            <Text style={styles.logMsg}>{log.msg}</Text>
-                        </View>
-                    ))
-                )}
-            </View>
-        </View>
+        {/* <View style={styles.logSection}>
+          <Text style={styles.logHeader}>Event Listeners:</Text>
+          <View style={styles.logBox}>
+            {logs.length === 0 ? (
+              <Text style={styles.emptyLog}>No events yet. Try opening the keyboard.</Text>
+            ) : (
+              logs.map(log => (
+                <View key={log.id} style={styles.logRow}>
+                  <Text style={styles.logTime}>{log.time}</Text>
+                  <Text style={styles.logMsg}>{log.msg}</Text>
+                </View>
+              ))
+            )}
+          </View>
+        </View> */}
       </FieldForm>
     </View>
   );
@@ -127,7 +122,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: ShowcaseSpacing.xl,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingTop: Platform.OS === 'ios' ? 100 : 110,
   },
   header: {
     alignItems: 'center',
@@ -135,8 +130,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   illustration: {
-    width: 100,
-    height: 100,
+    width: 90,
+    height: 90,
     borderRadius: ShowcaseRadius.lg,
     backgroundColor: C.accentLight,
     alignItems: 'center',

@@ -1,4 +1,4 @@
-import type { ComponentType, MutableRefObject, ReactNode, Ref } from 'react';
+import type { ComponentType, MutableRefObject, ReactNode, Ref } from "react";
 import type {
   KeyboardAvoidingViewProps,
   NativeSyntheticEvent,
@@ -7,13 +7,21 @@ import type {
   TextInput,
   TextInputProps,
   TextInputSubmitEditingEventData,
-} from 'react-native';
+} from "react-native";
 
 /** Public context API for field registration and chained focus (used by `KeyboardInput`). */
 export interface FieldFormContextValue {
-  register: (inputRef: MutableRefObject<TextInput | null>, skip?: boolean) => number;
+  register: (
+    inputRef: MutableRefObject<TextInput | null>,
+    skip?: boolean,
+    isAccessoryField?: boolean,
+  ) => number;
   unregister: (inputRef: MutableRefObject<TextInput | null>) => void;
-  updateField: (inputRef: MutableRefObject<TextInput | null>, skip?: boolean) => void;
+  updateField: (
+    inputRef: MutableRefObject<TextInput | null>,
+    skip?: boolean,
+    isAccessoryField?: boolean,
+  ) => void;
   focusNext: (currentIndex: number) => void;
   /** Scrolls the form scroll view to ensure the given input is visible above the keyboard. */
   scrollInputIntoView: (input: TextInput | null, padding?: number) => void;
@@ -39,9 +47,16 @@ export interface FieldFormHandle {
 }
 
 /** Matches `Platform.OS` at runtime. */
-export type KeyboardPlatformOs = 'ios' | 'android' | 'windows' | 'macos' | 'web';
+export type KeyboardPlatformOs =
+  | "ios"
+  | "android"
+  | "windows"
+  | "macos"
+  | "web";
 
-export type KeyboardVerticalOffsetResolver = (platform: KeyboardPlatformOs) => number;
+export type KeyboardVerticalOffsetResolver = (
+  platform: KeyboardPlatformOs,
+) => number;
 
 export interface FieldFormProps {
   children: ReactNode;
@@ -61,10 +76,15 @@ export interface FieldFormProps {
   autoReturnKeyType?: boolean;
   /** Tapping outside any input will dismiss the keyboard. @default false */
   dismissKeyboardOnTap?: boolean;
-
+  /**
+   * When true, the keyboard open animation uses a gentler easing so the
+   * chat message list slides up smoothly rather than jumping. This matches
+   * the pacing of WhatsApp / iMessage.
+   */
+  chatMode?: boolean;
   /**
    * Render a cross-platform view that hovers right above the keyboard consistently
-   * on both iOS and Android. It sits at the bottom of the container and moves up 
+   * on both iOS and Android. It sits at the bottom of the container and moves up
    * when the keyboard is shown. Useful for toolbars or submit buttons.
    */
   keyboardAccessoryView?: ReactNode;
@@ -74,7 +94,7 @@ export interface FieldFormProps {
    * - `'always'` — always visible, floats up when keyboard opens (default)
    * - `'whenKeyboardOpen'` — only visible while the keyboard is shown
    */
-  keyboardAccessoryViewMode?: 'whenKeyboardOpen' | 'always';
+  keyboardAccessoryViewMode?: "whenKeyboardOpen" | "always";
 
   /**
    * Replace the default `ScrollView` (e.g. `KeyboardAwareScrollView`).
@@ -91,29 +111,29 @@ export interface FieldFormProps {
 
   /**
    * Extra bottom padding merged into `contentContainerStyle` (in addition to your own styles).
-   * @default 40
+   * @default 50
    */
   extraScrollPadding?: number;
   /** Merged into `contentContainerStyle` after defaults. */
-  contentContainerStyle?: ScrollViewProps['contentContainerStyle'];
+  contentContainerStyle?: ScrollViewProps["contentContainerStyle"];
   /** When true, merges `{ flexGrow: 1 }` into `contentContainerStyle`. @default true */
   applyDefaultScrollContentFlexGrow?: boolean;
 
-  keyboardShouldPersistTaps?: ScrollViewProps['keyboardShouldPersistTaps'];
-  keyboardDismissMode?: ScrollViewProps['keyboardDismissMode'];
-  showsVerticalScrollIndicator?: ScrollViewProps['showsVerticalScrollIndicator'];
+  keyboardShouldPersistTaps?: ScrollViewProps["keyboardShouldPersistTaps"];
+  keyboardDismissMode?: ScrollViewProps["keyboardDismissMode"];
+  showsVerticalScrollIndicator?: ScrollViewProps["showsVerticalScrollIndicator"];
 
-  iosKeyboardAvoidingBehavior?: KeyboardAvoidingViewProps['behavior'];
-  androidKeyboardAvoidingBehavior?: KeyboardAvoidingViewProps['behavior'];
-  /** Static offset or per-platform resolver. Unset uses iOS `0`, Android `20`. */
+  iosKeyboardAvoidingBehavior?: KeyboardAvoidingViewProps["behavior"];
+  androidKeyboardAvoidingBehavior?: KeyboardAvoidingViewProps["behavior"];
+  /** Static offset or per-platform resolver. Unset uses iOS `0`, Android `25`. */
   keyboardVerticalOffset?: number | KeyboardVerticalOffsetResolver;
 
   /**
    * Keyboard listeners. If omitted but callbacks are set, listeners still attach.
    * Set `enableKeyboardListeners: false` to disable entirely.
    */
-  keyboardShowEvent?: 'keyboardWillShow' | 'keyboardDidShow';
-  keyboardHideEvent?: 'keyboardWillHide' | 'keyboardDidHide';
+  keyboardShowEvent?: "keyboardWillShow" | "keyboardDidShow";
+  keyboardHideEvent?: "keyboardWillHide" | "keyboardDidHide";
   enableKeyboardListeners?: boolean;
   onKeyboardShow?: (payload: { height: number; event: unknown }) => void;
   onKeyboardHide?: () => void;
@@ -152,14 +172,21 @@ export interface FieldInputProps extends TextInputProps {
   registerWithForm?: boolean;
   /** Skip this field during standard keyboard "Next" navigation. @default false */
   skip?: boolean;
+  /**
+   * When true the field lives inside the keyboard accessory view (outside
+   * the ScrollView). Prevents scrollInputIntoView being called on this node,
+   * which would cause "Error measuring text field" warnings because the scroll
+   * responder cannot find it in its subtree.
+   */
+  isAccessoryField?: boolean;
 }
 
 export type FieldInputSubmitEditingEvent =
   NativeSyntheticEvent<TextInputSubmitEditingEventData>;
 
 export interface UseKeyboardHeightOptions {
-  showEvent?: 'keyboardWillShow' | 'keyboardDidShow';
-  hideEvent?: 'keyboardWillHide' | 'keyboardDidHide';
+  showEvent?: "keyboardWillShow" | "keyboardDidShow";
+  hideEvent?: "keyboardWillHide" | "keyboardDidHide";
 }
 
 export interface KeyboardHeightPayload {

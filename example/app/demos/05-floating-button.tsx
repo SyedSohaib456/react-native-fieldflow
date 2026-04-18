@@ -1,28 +1,28 @@
-import React, { useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, Animated, Platform, TouchableOpacity } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { 
-  FieldForm, 
+import { Stack, useRouter } from 'expo-router';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Easing, Platform, StyleSheet, Text, View } from 'react-native';
+import {
+  FieldForm,
   FieldInput,
   useKeyboardHeight
 } from '../../../packages/react-native-fieldflow/src';
-import { ShowcaseColors as C, ShowcaseSpacing, ShowcaseRadius } from '../../constants/showcase-theme';
 import { ActionButton, IconButton } from '../../components/showcase';
+import { ShowcaseColors as C, ShowcaseRadius, ShowcaseSpacing } from '../../constants/showcase-theme';
 
 export default function FloatingButtonDemo() {
   const router = useRouter();
   const kbHeight = useKeyboardHeight();
-  
-  // Use Animated.Value to smoothly drive the button height
+
+  // Animated value for smooth lifting
   const liftAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.spring(liftAnim, {
+    Animated.timing(liftAnim, {
       toValue: kbHeight,
-      useNativeDriver: false, // height/margin doesn't support native driver
-      friction: 8,
-      tension: 40,
+      duration: 200,                    // ← Increased for smoothness
+      easing: Easing.out(Easing.cubic), // ← Much more natural feel
+      useNativeDriver: true,
     }).start();
   }, [kbHeight]);
 
@@ -39,19 +39,16 @@ export default function FloatingButtonDemo() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen 
-        options={{ 
+      <Stack.Screen
+        options={{
           headerLeft: () => (
-            <IconButton 
-              icon="chevron-back" 
-              onPress={() => router.back()} 
-            />
+            <IconButton icon="chevron-back" onPress={() => router.back()} />
           ),
-        }} 
+        }}
       />
 
-      <FieldForm 
-        avoidKeyboard={false} // IMPORTANT: We are handling avoidance manually via hook
+      <FieldForm
+        avoidKeyboard={false}
         extraScrollPadding={100}
         keyboardVerticalOffset={0}
         scrollViewProps={{
@@ -60,8 +57,8 @@ export default function FloatingButtonDemo() {
         }}
       >
         <View style={styles.header}>
-            <Text style={styles.title}>Filter Results</Text>
-            <Text style={styles.subtitle}>Lift UI elements manually using useKeyboardHeight().</Text>
+          <Text style={styles.title}>Filter Results</Text>
+          <Text style={styles.subtitle}>Smooth keyboard-aware floating button</Text>
         </View>
 
         <View style={styles.formCard}>
@@ -86,16 +83,23 @@ export default function FloatingButtonDemo() {
         </View>
       </FieldForm>
 
-      {/* This button lifts exactly above the keyboard */}
-      <Animated.View style={[styles.footer, { marginBottom: liftAnim }]}>
+      {/* Smooth Floating Footer */}
+      <Animated.View
+        style={[
+          styles.footer,
+          { transform: [{ translateY: Animated.multiply(liftAnim, -1) }] }
+        ]}
+      >
         <View style={styles.footerContent}>
           <View style={styles.readout}>
             <Ionicons name="stats-chart" size={14} color={C.accent} />
-            <Text style={styles.readoutText}>Keyboard height: {Math.round(kbHeight)}px</Text>
+            <Text style={styles.readoutText}>
+              Keyboard height: {Math.round(kbHeight)}px
+            </Text>
           </View>
-          <ActionButton 
-            title="Apply 8 Filters" 
-            onPress={() => router.back()} 
+          <ActionButton
+            title="Apply 8 Filters"
+            onPress={() => router.back()}
             style={styles.applyButton}
           />
         </View>
@@ -103,7 +107,6 @@ export default function FloatingButtonDemo() {
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,

@@ -25,12 +25,6 @@ import {
   type TextInput,
 } from 'react-native';
 
-// NOTE: ReanimatedAccessory has been intentionally removed.
-// The keyboard accessory view is now animated with a dedicated Animated.timing
-// effect (see inside FieldForm) that uses the keyboard event's exact duration
-// and curve — giving reliable, smooth animation on both platforms regardless
-// of whether Reanimated worklets are compiled.
-
 import { FieldFlowContext } from './context';
 import type {
   FieldFormContextValue,
@@ -40,6 +34,11 @@ import type {
 } from './types';
 
 const defaultExtraScrollPadding = 50;
+
+// If the keyboard height changes by less than this many pixels between two
+// consecutive show events (e.g. switching fields that triggers the autofill
+// suggestions bar), we skip re-animating the accessory bar entirely.
+const KEYBOARD_HEIGHT_CHANGE_THRESHOLD = 60;
 
 function resolveKeyboardVerticalOffset(
   value: FieldFormProps['keyboardVerticalOffset'],
@@ -89,18 +88,23 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
     keyboardAccessoryViewMode = 'always',
     scrollViewRef: scrollViewRefProp,
     resetScrollOnKeyboardHide = false,
+    // ── Chat mode ──────────────────────────────────────────────────────────
+    // When true, the keyboard open animation uses a gentler easing so the
+    // chat message list slides up smoothly rather than jumping. This matches
+    // the pacing of WhatsApp / iMessage where the conversation content eases
+    // up with the keyboard instead of snapping to its final position.
+    chatMode = false,
   } = props;
 
-  const fieldsRef = useRef<{ ref: React.MutableRefObject<TextInput | null>; skip?: boolean }[]>([]);
+  const fieldsRef = useRef<{
+    ref: React.MutableRefObject<TextInput | null>;
+    skip?: boolean;
+    isAccessoryField?: boolean;
+  }[]>([]);
   const internalScrollRef = useRef<ScrollView | null>(null);
   const [accessoryHeight, setAccessoryHeight] = React.useState(0);
-  /** Drives bottom padding for accessory when mode is `whenKeyboardOpen` (clears when keyboard closes). */
   const [keyboardOpen, setKeyboardOpen] = React.useState(false);
 
-  // Ref to the outermost wrapper View — used to measure how far the container
-  // bottom sits above the real screen bottom (e.g. tab bar height).
-  // The keyboard height from events is always in screen coordinates, so we
-  // subtract this offset to get the correct `bottom` value within our View.
   const posRef = useRef<View | null>(null);
   const bottomOffsetRef = useRef(0);
   const handleContainerLayout = useCallback(() => {
@@ -119,8 +123,7 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
         if (typeof scrollViewRefProp === 'function') {
           scrollViewRefProp(next);
         } else {
-          (scrollViewRefProp as React.MutableRefObject<ScrollView | null>).current =
-            next;
+          (scrollViewRefProp as React.MutableRefObject<ScrollView | null>).current = next;
         }
       } catch {
         // Parent passed a read-only / frozen ref (e.g. some RN + Reanimated paths).
@@ -129,11 +132,17 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
     [scrollViewRefProp],
   );
 
-  const register = useCallback((inputRef: React.MutableRefObject<TextInput | null>, skip?: boolean): number => {
+  // ── Field registry ────────────────────────────────────────────────────────
+
+  const register = useCallback((
+    inputRef: React.MutableRefObject<TextInput | null>,
+    skip?: boolean,
+    isAccessoryField?: boolean,
+  ): number => {
     const fields = fieldsRef.current;
     const existingIdx = fields.findIndex(f => f.ref === inputRef);
     if (existingIdx === -1) {
-      fields.push({ ref: inputRef, skip });
+      fields.push({ ref: inputRef, skip, isAccessoryField });
       return fields.length - 1;
     }
     return existingIdx;
@@ -145,11 +154,16 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
     if (idx > -1) fields.splice(idx, 1);
   }, []);
 
-  const updateField = useCallback((inputRef: React.MutableRefObject<TextInput | null>, skip?: boolean) => {
+  const updateField = useCallback((
+    inputRef: React.MutableRefObject<TextInput | null>,
+    skip?: boolean,
+    isAccessoryField?: boolean,
+  ) => {
     const fields = fieldsRef.current;
     const idx = fields.findIndex(f => f.ref === inputRef);
     if (idx > -1) {
       fields[idx].skip = skip;
+      fields[idx].isAccessoryField = isAccessoryField;
     }
   }, []);
 
@@ -170,9 +184,6 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
       const handle = findNodeHandle(input);
       if (!handle) return;
       const pad = padding ?? (typeof extraScrollPadding === 'number' ? extraScrollPadding : 0);
-
-      // Use a small timeout + requestAnimationFrame to ensure the scroll happens 
-      // after layout cycles and keyboard animations have started.
       setTimeout(() => {
         requestAnimationFrame(() => {
           scroll.scrollResponderScrollNativeHandleToKeyboard?.(handle, pad, true);
@@ -185,18 +196,22 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
   const focusNext = useCallback(
     (currentIndex: number) => {
       const fields = fieldsRef.current;
-      let nextField = null;
-
+      let nextField: typeof fields[0] | null = null;
       for (let i = currentIndex + 1; i < fields.length; i++) {
         if (!fields[i].skip) {
-          nextField = fields[i].ref;
+          nextField = fields[i];
           break;
         }
       }
-
-      if (nextField?.current) {
-        nextField.current.focus();
-        scrollInputIntoView(nextField.current);
+      if (nextField?.ref.current) {
+        nextField.ref.current.focus();
+        // isAccessoryField = true means the field lives outside the ScrollView
+        // (inside the keyboard accessory view). Calling scrollInputIntoView on
+        // these nodes causes "Error measuring text field" warnings because the
+        // scroll responder cannot find them in its subtree. Skip it.
+        if (!nextField.isAccessoryField) {
+          scrollInputIntoView(nextField.ref.current);
+        }
       } else if (dismissKeyboardOnFocusPastLast) {
         Keyboard.dismiss();
       }
@@ -205,9 +220,7 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
   );
 
   const submitForm = useCallback(() => {
-    if (dismissKeyboardOnSubmit) {
-      Keyboard.dismiss();
-    }
+    if (dismissKeyboardOnSubmit) Keyboard.dismiss();
     onSubmit?.();
   }, [dismissKeyboardOnSubmit, onSubmit]);
 
@@ -223,9 +236,7 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
   );
 
   useEffect(() => {
-    if (Platform.OS !== 'android' || !androidDismissKeyboardOnBackPress) {
-      return undefined;
-    }
+    if (Platform.OS !== 'android' || !androidDismissKeyboardOnBackPress) return undefined;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       Keyboard.dismiss();
       return false;
@@ -235,51 +246,102 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
 
   const animatedMargin = useRef(new Animated.Value(0)).current;
 
-  // ─── Dedicated accessory animation ────────────────────────────────
-  // Animate translateY with useNativeDriver so motion stays on the UI thread.
-  // Negative translateY moves the bar up with the keyboard (anchored at bottom: 0).
+  // ─── Accessory bar animation ───────────────────────────────────────────────
   //
-  // iOS:  keyboardWillShow / keyboardWillHide   (fire before animation starts)
-  // Android: keyboardDidShow / keyboardDidHide   (fire after animation)
-  // In both cases we use e.duration to match the keyboard's own timing.
+  // iOS fires keyboardWillShow BEFORE the keyboard animates — perfect sync.
+  // Android only fires keyboardDidShow AFTER — too late, causing a visible pop.
+  //
+  // Android solution — two-phase approach:
+  //   Phase 1 — keyboardWillShow (fires on focus, keyboard not yet visible):
+  //     Silently setValue the bar to -accessoryHeight so it sits flush at the
+  //     bottom of the content area. The keyboard hasn't appeared yet so this
+  //     move is completely invisible to the user.
+  //   Phase 2 — keyboardDidShow (keyboard fully up):
+  //     Animate from -accessoryHeight → -keyboardHeight using the keyboard's
+  //     own reported duration + decelerate easing. The bar travels the same
+  //     distance the keyboard rose, so it appears to ride up with it.
+  //
+  // Flicker fix (field switching):
+  //   When the user tabs between fields iOS fires keyboardWillShow again with
+  //   a slightly different height (e.g. "Passwords" bar adds ~45px). If the
+  //   delta is below KEYBOARD_HEIGHT_CHANGE_THRESHOLD we silently setValue
+  //   instead of re-animating to avoid the flicker.
+  // ──────────────────────────────────────────────────────────────────────────
+
   const accessoryTranslateY = useRef(new Animated.Value(0)).current;
   const accessoryOpacity = useRef(
     new Animated.Value(keyboardAccessoryViewMode === 'whenKeyboardOpen' ? 0 : 1)
   ).current;
+  const lastKeyboardHeightRef = useRef(0);
+  const accessoryHeightRef = useRef(0);
 
-  const hasKeyboardAccessory =
-    keyboardAccessoryView != null && keyboardAccessoryView !== false;
+  const hasKeyboardAccessory = keyboardAccessoryView != null && keyboardAccessoryView !== false;
 
   useEffect(() => {
     if (!hasKeyboardAccessory) return;
 
-    // Always use Will-events on iOS so animation starts in sync;
-    // Did-events on Android where Will-events don't exist.
     const accShowEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const accHideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
+    // ── Android Phase 1: silent pre-position on focus ──────────────────────
+    let androidPreSub: ReturnType<typeof Keyboard.addListener> | null = null;
+    if (Platform.OS === 'android') {
+      androidPreSub = Keyboard.addListener('keyboardWillShow', () => {
+        const barH = accessoryHeightRef.current;
+        if (barH > 0) {
+          accessoryTranslateY.setValue(-barH);
+        }
+        if (keyboardAccessoryViewMode === 'whenKeyboardOpen') {
+          accessoryOpacity.setValue(0);
+        }
+      });
+    }
+
     const accShowSub = Keyboard.addListener(accShowEvent, e => {
       const h = e.endCoordinates.height;
-      // Use the keyboard's own duration — this is the secret to perfect sync.
       const dur = e.duration || 250;
-      // iOS keyboard spring decelerates rapidly and is perceptually "at rest" well
-      // before the reported duration ends. Using expoOut (Bezier 0.16,1,0.3,1)
-      // means we reach 97% of target at ~35% of duration — our bar is visually
-      // settled before the keyboard even starts to slow, eliminating trailing motion.
-      const easing = Platform.OS === 'ios'
-        ? Easing.bezier(0.16, 1, 0.3, 1)  // expoOut — fast rise, no animation tail
-        : Easing.out(Easing.ease);
-      // Subtract the container's offset from the real screen bottom (e.g. tab bar
-      // height). Keyboard height is in screen coords; our `bottom` prop is in
-      // container coords — without this the bar floats above the keyboard by exactly
-      // the tab bar height.
-      const adjustedH = Platform.OS === 'ios' ? Math.max(h - bottomOffsetRef.current, 0) :h;
+      const prevH = lastKeyboardHeightRef.current;
+      const delta = Math.abs(h - prevH);
 
+      // Flicker fix: small height change = field switch, not keyboard open.
+      if (prevH > 0 && delta < KEYBOARD_HEIGHT_CHANGE_THRESHOLD) {
+        const adjustedH = Platform.OS === 'ios'
+          ? Math.max(h - bottomOffsetRef.current, 0)
+          : h;
+        accessoryTranslateY.stopAnimation();
+        accessoryTranslateY.setValue(-adjustedH);
+        lastKeyboardHeightRef.current = h;
+        return;
+      }
+
+      lastKeyboardHeightRef.current = h;
+
+      if (Platform.OS === 'android') {
+        Animated.timing(accessoryTranslateY, {
+          toValue: -h,
+          duration: dur,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }).start();
+
+        if (keyboardAccessoryViewMode === 'whenKeyboardOpen') {
+          Animated.timing(accessoryOpacity, {
+            toValue: 1,
+            duration: Math.min(dur * 0.3, 100),
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: true,
+          }).start();
+        }
+        return;
+      }
+
+      // iOS
+      const adjustedH = Math.max(h - bottomOffsetRef.current, 0);
       const animations: Animated.CompositeAnimation[] = [
         Animated.timing(accessoryTranslateY, {
           toValue: -adjustedH,
           duration: dur,
-          easing,
+          easing: Easing.bezier(0.16, 1, 0.3, 1),
           useNativeDriver: true,
         }),
       ];
@@ -287,7 +349,6 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
         animations.push(
           Animated.timing(accessoryOpacity, {
             toValue: 1,
-            // Fade in quickly at the start of the keyboard animation
             duration: Math.min(dur * 0.25, 80),
             easing: Easing.out(Easing.quad),
             useNativeDriver: true,
@@ -297,45 +358,66 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
       Animated.parallel(animations).start();
     });
 
-    const accHideSub = Keyboard.addListener(accHideEvent, e => {
-      const dur = e?.duration || 250;
-      const hideTranslateEasing =
-        Platform.OS === 'ios'
-          ? Easing.bezier(0.42, 0, 1, 1)
-          : Easing.in(Easing.ease);
+    const accHideSub = Keyboard.addListener(accHideEvent, () => {
+      lastKeyboardHeightRef.current = 0;
 
       if (keyboardAccessoryViewMode === 'always') {
-        // Match keyboard dismiss so the toolbar doesn't "float" on its own spring.
-        Animated.timing(accessoryTranslateY, {
-          toValue: 0,
-          duration: dur,
-          easing: hideTranslateEasing,
-          useNativeDriver: true,
-        }).start();
-      } else {
-        // ── 'whenKeyboardOpen' mode ────────────────────────────────────
-        // Bar must disappear while the keyboard is dismissed, so stay
-        // timed with the keyboard event duration.
-        Animated.parallel([
+        if (Platform.OS === 'android') {
           Animated.timing(accessoryTranslateY, {
             toValue: 0,
-            duration: dur,
-            easing: hideTranslateEasing,
+            duration: 160,
+            easing: Easing.out(Easing.cubic),
             useNativeDriver: true,
-          }),
-          Animated.timing(accessoryOpacity, {
+          }).start();
+        } else {
+          Animated.spring(accessoryTranslateY, {
             toValue: 0,
-            duration: Math.min(dur * 0.25, 80),
-            easing: Easing.in(Easing.quad),
+            mass: 0.1,
+            stiffness: 120,
+            damping: 20,
+            overshootClamping: true,
             useNativeDriver: true,
-          }),
-        ]).start();
+          }).start();
+        }
+      } else {
+        if (Platform.OS === 'android') {
+          Animated.parallel([
+            Animated.timing(accessoryTranslateY, {
+              toValue: 0,
+              duration: 160,
+              easing: Easing.out(Easing.cubic),
+              useNativeDriver: true,
+            }),
+            Animated.timing(accessoryOpacity, {
+              toValue: 0,
+              duration: 80,
+              easing: Easing.in(Easing.quad),
+              useNativeDriver: true,
+            }),
+          ]).start();
+        } else {
+          Animated.parallel([
+            Animated.timing(accessoryTranslateY, {
+              toValue: 0,
+              duration: 250,
+              easing: Easing.bezier(0.42, 0, 1, 1),
+              useNativeDriver: true,
+            }),
+            Animated.timing(accessoryOpacity, {
+              toValue: 0,
+              duration: 80,
+              easing: Easing.in(Easing.quad),
+              useNativeDriver: true,
+            }),
+          ]).start();
+        }
       }
     });
 
     return () => {
       accShowSub.remove();
       accHideSub.remove();
+      androidPreSub?.remove();
     };
   }, [
     hasKeyboardAccessory,
@@ -343,8 +425,9 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
     accessoryTranslateY,
     accessoryOpacity,
   ]);
-  // ──────────────────────────────────────────────────────────────────
 
+  // ─── Main keyboard show/hide (bottom margin for Android avoidance) ─────────
+  // ─── Main keyboard show/hide ───────────────────────────────────────────────
   useEffect(() => {
     const showEvent =
       keyboardShowEvent ?? (Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow');
@@ -357,24 +440,43 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
       const offset = resolveKeyboardVerticalOffset(keyboardVerticalOffset);
       const finalHeight = Math.max(h + offset, 0);
 
-      // Scroll bottom spacer (non‑iOS, or iOS when not using the static spacer below).
-      // Avoid useAnimatedKeyboard here — it can throw on New Architecture (frozen ref).
       if (avoidKeyboard) {
         if (Platform.OS === 'ios') {
-          // Spacer height is fixed on iOS; animating this value still costs JS frames.
+          // iOS: automaticallyAdjustKeyboardInsets handles everything.
           animatedMargin.setValue(0);
         } else {
-          Animated.timing(animatedMargin, {
-            toValue: finalHeight,
-            duration: e.duration || 250,
-            easing: Easing.out(Easing.poly(4)),
-            useNativeDriver: false,
-          }).start();
+          if (chatMode) {
+            // ── chatMode Android: skip the JS-thread height animation entirely.
+            // Animating `height` with useNativeDriver:false runs layout on every
+            // JS frame — that's the source of "2000 dropped frames" even when
+            // the UI thread stays at 120fps. Instead, snap the spacer instantly
+            // (one synchronous setValue, zero JS animation loop) and let
+            // scrollToEnd provide the smooth motion — it runs on the native thread.
+            animatedMargin.setValue(finalHeight);
+            internalScrollRef.current?.scrollToEnd({ animated: true });
+          } else {
+            // Normal (non-chat) forms: animate the spacer so content shifts up
+            // with the keyboard. Dropping frames here is acceptable because
+            // normal forms don't need 120fps chat-style smoothness.
+            Animated.timing(animatedMargin, {
+              toValue: finalHeight,
+              duration: e.duration || 250,
+              easing: Easing.out(Easing.poly(4)),
+              useNativeDriver: false,
+            }).start();
+          }
         }
       }
+
+      // iOS chatMode: inset system settles in ~1 frame, then pin to bottom.
+      if (chatMode && Platform.OS === 'ios') {
+        setTimeout(() => {
+          internalScrollRef.current?.scrollToEnd({ animated: true });
+        }, 50);
+      }
+
       onKeyboardShow?.({ height: h, event: e });
     });
-
     const hideSub = Keyboard.addListener(hideEvent, e => {
       const hideDuration = e?.duration || 250;
       const hideEasing =
@@ -399,7 +501,6 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
       if (resetScrollOnKeyboardHide && scrollable) {
         const scroll = internalScrollRef.current;
         if (scroll) {
-          // Same frame as keyboard hide — avoids an extra rAF of latency.
           scroll.scrollTo({ x: 0, y: 0, animated: false });
         }
       }
@@ -438,6 +539,7 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
     };
   }, [
     avoidKeyboard,
+    chatMode,
     keyboardVerticalOffset,
     keyboardShowEvent,
     keyboardHideEvent,
@@ -448,6 +550,7 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
     keyboardAccessoryView,
     keyboardAccessoryViewMode,
   ]);
+  // ─── Context ───────────────────────────────────────────────────────────────
 
   const ctx = useMemo(
     (): FieldFormContextValue => ({
@@ -480,6 +583,8 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
     ],
   );
 
+  // ─── Render ────────────────────────────────────────────────────────────────
+
   const {
     style: scrollStyleFromProps,
     contentContainerStyle: scrollContentFromProps,
@@ -503,10 +608,6 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
       ? { paddingBottom: accessoryHeight }
       : null,
   ];
-
-  const kavBehavior =
-    Platform.OS === 'ios' ? iosKeyboardAvoidingBehavior : androidKeyboardAvoidingBehavior;
-  const kavOffset = resolveKeyboardVerticalOffset(keyboardVerticalOffset);
 
   const KavComp = KeyboardAvoidingViewComponent ?? KeyboardAvoidingView;
 
@@ -556,18 +657,11 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
     }
   }
 
-  // Wrap everything in a stable View so:
-  //  1. The absolute-positioned accessory bar is scoped correctly.
-  //  2. measureInWindow (via posRef) can compute the container's offset
-  //     from the real screen bottom to account for tab bars etc.
   return (
     <View ref={posRef} style={styles.container} onLayout={handleContainerLayout}>
       <FieldFlowContext.Provider value={ctx}>
         {content}
         {keyboardAccessoryView && (
-          // Always use Animated.View here — driven by the dedicated
-          // accessoryMargin effect above which uses the keyboard's own
-          // duration for frame-accurate sync on both platforms.
           <Animated.View
             style={[
               styles.accessory,
@@ -581,7 +675,13 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
             ]}
             pointerEvents="box-none"
           >
-            <View onLayout={(e) => setAccessoryHeight(e.nativeEvent.layout.height)}>
+            <View
+              onLayout={(e) => {
+                const h = e.nativeEvent.layout.height;
+                setAccessoryHeight(h);
+                accessoryHeightRef.current = h;
+              }}
+            >
               {keyboardAccessoryView}
             </View>
           </Animated.View>
@@ -595,7 +695,6 @@ FieldForm.displayName = 'FieldForm';
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  flex1: { flex: 1 },
   scrollContent: { flexGrow: 1 },
   accessory: {
     position: 'absolute',

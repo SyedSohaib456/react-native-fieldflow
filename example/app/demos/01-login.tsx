@@ -1,13 +1,12 @@
-import React from 'react';
-import { StyleSheet, Text, View, Platform, Alert } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { 
-  FieldForm, 
-  FieldInput 
+import { Stack, useRouter } from 'expo-router';
+import React from 'react';
+import { Alert, StyleSheet, Text, View } from 'react-native';
+import {
+  FieldForm
 } from '../../../packages/react-native-fieldflow/src';
-import { ShowcaseColors as C, ShowcaseSpacing, ShowcaseRadius } from '../../constants/showcase-theme';
-import { ActionButton, IconButton } from '../../components/showcase';
+import { ActionButton, IconButton, StyledInput } from '../../components/showcase';
+import { ShowcaseColors as C, ShowcaseRadius, ShowcaseSpacing } from '../../constants/showcase-theme';
 
 export default function LoginDemo() {
   const router = useRouter();
@@ -18,61 +17,51 @@ export default function LoginDemo() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen 
-        options={{ 
+      <Stack.Screen
+        options={{
           headerLeft: () => (
-            <IconButton 
-              icon="chevron-back" 
-              onPress={() => router.back()} 
+            <IconButton
+              icon="chevron-back"
+              onPress={() => router.back()}
             />
           ),
-        }} 
+        }}
       />
 
-      <FieldForm 
+      <FieldForm
         onSubmit={handleSubmit}
-        extraScrollPadding={100}
+        extraScrollPadding={140}
         keyboardVerticalOffset={0}
         scrollViewProps={{
           contentContainerStyle: styles.scrollContent,
-          keyboardDismissMode: 'interactive',
         }}
       >
         <View style={styles.header}>
-            <View style={styles.iconCircle}>
-                <Ionicons name="lock-closed" size={32} color={C.accent} />
-            </View>
-            <Text style={styles.title}>Welcome back</Text>
-            <Text style={styles.subtitle}>The smallest possible working form.</Text>
+          <View style={styles.iconCircle}>
+            <Ionicons name="lock-closed" size={32} color={C.accent} />
+          </View>
+          <Text style={styles.title}>Welcome back</Text>
+          <Text style={styles.subtitle}>The smallest possible working form.</Text>
         </View>
 
         <View style={styles.form}>
-          <View style={styles.inputWrapper}>
-            <Text style={styles.label}>Email Address</Text>
-            <FieldInput 
-              placeholder="john@example.com"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              textContentType="emailAddress"
-              style={styles.input}
-              placeholderTextColor={C.textTertiary}
-            />
-          </View>
-
-          <View style={styles.inputWrapper}>
-            <Text style={styles.label}>Password</Text>
-            <FieldInput 
-              placeholder="••••••••"
-              secureTextEntry
-              textContentType="password"
-              style={styles.input}
-              placeholderTextColor={C.textTertiary}
-            />
-          </View>
-
-          <ActionButton 
-            title="Sign in" 
-            onPress={handleSubmit} 
+          <StyledInput
+            icon="mail-outline"
+            label="Email address"
+            placeholder="john@example.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+          <StyledInput
+            icon="lock-closed-outline"
+            label="Password"
+            placeholder="john@example.com"
+            keyboardType="visible-password"
+            autoCapitalize="none"
+          />
+          <ActionButton
+            title="Sign in"
+            onPress={handleSubmit}
             style={styles.submitButton}
           />
 

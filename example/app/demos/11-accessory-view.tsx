@@ -1,143 +1,145 @@
-import React, { useState } from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  Platform, 
-  TouchableOpacity, 
-  Switch,
-  Alert,
-  ScrollView
-} from 'react-native';
-import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { 
-  FieldForm, 
-  FieldInput 
-} from '../../../packages/react-native-fieldflow/src';
-import { ShowcaseColors as C, ShowcaseSpacing, ShowcaseRadius } from '../../constants/showcase-theme';
+import { Stack, useRouter } from 'expo-router';
+import React from 'react';
+import {
+  Alert,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FieldForm, FieldInput } from '../../../packages/react-native-fieldflow/src';
 import { IconButton } from '../../components/showcase';
 
-export default function AccessoryViewDemo() {
+const THEME = {
+  incoming: '#FFFFFF',
+  outgoing: '#10B981',
+  background: '#F1F5F1',
+  textMain: '#064E3B',
+  textContrast: '#FFFFFF',
+  accent: '#059669',
+};
+
+export default function ChatComposerDemo() {
   const router = useRouter();
-  const [useSimpleButton, setUseSimpleButton] = useState(false);
+  const insets = useSafeAreaInsets();
 
   const handleSend = () => {
-    Alert.alert('Sent', 'Message sent successfully!');
+    Alert.alert('FieldFlow', 'Message sent! Zero manual ref management.');
   };
 
-  const renderToolbar = () => (
-    <View style={styles.toolbar}>
-      <View style={styles.toolbarLeft}>
-        <TouchableOpacity style={styles.toolBtn}>
-          <Ionicons name="at-outline" size={18} color={C.accent} />
-          <Text style={styles.toolText}>Mention</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.toolBtn}>
-          <Ionicons name="hash-outline" size={18} color={C.accent} />
-          <Text style={styles.toolText}>Tag</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.toolBtn}>
-          <Ionicons name="image-outline" size={18} color={C.textTertiary} />
+  const renderFullAccessory = () => (
+    <View style={styles.accessoryWrapper}>
+      <View style={styles.accessoryContainer}>
+        <View style={styles.inputContainer}>
+          <TouchableOpacity style={styles.iconButton}>
+            <Ionicons name="happy-outline" size={26} color="#6B7280" />
+          </TouchableOpacity>
+
+          <FieldInput
+            placeholder="Type a message"
+            multiline
+            isAccessoryField
+            style={styles.input}
+          />
+
+          <TouchableOpacity style={styles.iconButton}>
+            <Ionicons name="attach-outline" size={26} color="#6B7280" />
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
+          <Ionicons name="send" size={24} color="#FFF" />
         </TouchableOpacity>
       </View>
-      <TouchableOpacity style={styles.sendBtn} onPress={handleSend}>
-        <Text style={styles.sendBtnText}>Send</Text>
-        <Ionicons name="paper-plane" size={16} color="#FFF" />
-      </TouchableOpacity>
-    </View>
-  );
-
-  const renderSimpleButton = () => (
-    <View style={styles.simpleButtonWrapper}>
-      <TouchableOpacity style={styles.fullWidthBtn} onPress={handleSend}>
-        <Text style={styles.fullWidthBtnText}>Post Comment</Text>
-      </TouchableOpacity>
     </View>
   );
 
   return (
-    <View style={styles.container}>
-      <Stack.Screen 
-        options={{ 
-          headerLeft: () => (
-            <IconButton 
-              icon="chevron-back" 
-              onPress={() => router.back()} 
-            />
-          ),
-        }} 
+    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+      <Stack.Screen
+        options={{
+          headerLeft: () => <IconButton icon="chevron-back" onPress={() => router.back()} />,
+          title: 'FieldFlow Chat',
+          headerShadowVisible: false,
+        }}
       />
 
-      <View style={styles.configBar}>
-        <Text style={styles.configLabel}>Show simple submit button instead of toolbar</Text>
-        <Switch 
-          value={useSimpleButton} 
-          onValueChange={setUseSimpleButton}
-          trackColor={{ false: C.border, true: C.accent }}
-        />
-      </View>
-
-      <FieldForm 
-        keyboardAccessoryView={useSimpleButton ? renderSimpleButton() : renderToolbar()}
+      <FieldForm
+        keyboardAccessoryView={renderFullAccessory()}
         keyboardAccessoryViewMode="always"
-        extraScrollPadding={100}
-        keyboardVerticalOffset={0}
+        extraScrollPadding={20}
+        chatMode
+        avoidKeyboard
         scrollViewProps={{
           contentContainerStyle: styles.scrollContent,
           keyboardDismissMode: 'interactive',
         }}
       >
-        <View style={styles.card}>
-            <View style={styles.inputSection}>
-                <Text style={styles.label}>Subject</Text>
-                <FieldInput placeholder="What's on your mind?" style={styles.subjectInput} />
+        <View style={styles.messagesArea}>
+          {/* Incoming 1 */}
+          <View style={styles.messageRow}>
+            <View style={styles.incomingBubble}>
+              <Text style={styles.messageText}>
+                Tired of wiring up 5 refs for one form. Better way? 😩
+              </Text>
+              <Text style={styles.timestamp}>10:42 AM</Text>
             </View>
-            <View style={[styles.inputSection, { borderBottomWidth: 0 }]}>
-                <Text style={styles.label}>Message</Text>
-                <FieldInput 
-                    placeholder="Type your message here..." 
-                    multiline 
-                    numberOfLines={6} 
-                    skip 
-                    style={styles.msgInput} 
-                />
-            </View>
-        </View>
+          </View>
 
-        <View style={styles.parityBox}>
-            <Text style={styles.parityTitle}>Native Platform Parity</Text>
-            <View style={styles.parityRow}>
-                <View style={styles.parityItem}>
-                    <View style={styles.parityCheck}>
-                        <Ionicons name="logo-apple" size={14} color={C.accent} />
-                        <Text style={styles.parityPlatform}>iOS</Text>
-                        <Ionicons name="checkmark-circle" size={16} color={C.accent} />
-                    </View>
-                    <Text style={styles.parityEvent}>keyboardWillShow</Text>
-                </View>
-                <View style={styles.parityDivider} />
-                <View style={styles.parityItem}>
-                    <View style={styles.parityCheck}>
-                        <Ionicons name="logo-android" size={14} color={C.accent} />
-                        <Text style={styles.parityPlatform}>Android</Text>
-                        <Ionicons name="checkmark-circle" size={16} color={C.accent} />
-                    </View>
-                    <Text style={styles.parityEvent}>keyboardDidShow</Text>
-                </View>
+          {/* Outgoing 1 */}
+          <View style={styles.messageRow}>
+            <View style={styles.outgoingBubble}>
+              <Text style={[styles.messageText, { color: THEME.textContrast }]}>
+                Try <Text style={{ fontWeight: '800' }}>FieldFlow</Text>. It automates focus chaining. Just wrap and go.
+              </Text>
+              <View style={styles.messageFooter}>
+                <Text style={[styles.timestamp, { color: 'rgba(255,255,255,0.7)' }]}>10:43 AM</Text>
+                <Ionicons name="checkmark-done" size={16} color="#FFF" />
+              </View>
             </View>
-            <Text style={styles.parityDesc}>
-                FieldFlow handles the timing mismatch automatically. Your accessory view always lands flush.
-            </Text>
-        </View>
+          </View>
 
-        <View style={styles.comparisonNote}>
-            <Text style={styles.compNoteText}>
-                <Text style={styles.bold}>Without this prop:</Text> You&apos;d need useKeyboardHeight() + Animated.View marginBottom (8+ lines).
-            </Text>
-            <Text style={styles.compNoteText}>
-                <Text style={styles.bold}>With FieldFlow:</Text> Handled with a single prop. 0 extra lines.
-            </Text>
+          {/* Incoming 2 */}
+          <View style={styles.messageRow}>
+            <View style={styles.incomingBubble}>
+              <Text style={styles.messageText}>
+                Does it handle the returnKey and auto-focus?
+              </Text>
+              <Text style={styles.timestamp}>10:44 AM</Text>
+            </View>
+          </View>
+
+          {/* Outgoing 2 */}
+          <View style={styles.messageRow}>
+            <View style={styles.outgoingBubble}>
+              <Text style={[styles.messageText, { color: THEME.textContrast }]}>
+                Yep. Zero boilerplate. Synced accessory views, no jitter on Android.
+              </Text>
+              <View style={styles.messageFooter}>
+                <Text style={[styles.timestamp, { color: 'rgba(255,255,255,0.7)' }]}>10:45 AM</Text>
+                <Ionicons name="checkmark-done" size={16} color="#FFF" />
+              </View>
+            </View>
+          </View>
+          <View style={styles.messageRow}>
+            <View style={styles.incomingBubble}>
+              <Text style={styles.messageText}>
+                Wait, I just tried it... Wow. This is actually amazing. 🤯
+              </Text>
+              <Text style={styles.timestamp}>10:42 AM</Text>
+            </View>
+          </View>
+        </View>
+        {/* New Incoming 3 */}
+
+
+        <View style={styles.infoCard}>
+          <Text style={styles.infoTitle}>High-Performance Flow</Text>
+          <Text style={styles.infoText}>
+            Eliminate KeyboardAvoidingView struggles. Auto-focus chaining in under 10 lines of code.
+          </Text>
         </View>
       </FieldForm>
     </View>
@@ -145,190 +147,104 @@ export default function AccessoryViewDemo() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: C.bgSecondary,
+  container: { flex: 1, backgroundColor: THEME.background },
+  scrollContent: { paddingBottom: 40 },
+  messagesArea: { paddingHorizontal: 12, paddingTop: 16, gap: 10 },
+  messageRow: { marginVertical: 1 },
+  incomingBubble: {
+    alignSelf: 'flex-start',
+    backgroundColor: THEME.incoming,
+    padding: 8,
+    borderRadius: 18,
+    borderBottomLeftRadius: 5,
+    maxWidth: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  configBar: {
+  outgoingBubble: {
+    alignSelf: 'flex-end',
+    backgroundColor: THEME.outgoing,
+    padding: 8,
+    borderRadius: 18,
+    borderBottomRightRadius: 5,
+    maxWidth: '80%',
+  },
+  messageText: {
+    fontSize: 15,
+    lineHeight: 20,
+    color: THEME.textMain,
+  },
+  messageFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: ShowcaseSpacing.lg,
-    backgroundColor: C.bgPrimary,
-    borderBottomWidth: 1,
-    borderBottomColor: C.borderSubtle,
-    gap: 12,
-  },
-  configLabel: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: '600',
-    color: C.textSecondary,
-  },
-  scrollContent: {
-    padding: ShowcaseSpacing.lg,
-    paddingTop: ShowcaseSpacing.xl,
-    paddingBottom: 100,
-  },
-  card: {
-    backgroundColor: C.bgPrimary,
-    borderRadius: ShowcaseRadius.lg,
-    borderWidth: 1,
-    borderColor: C.border,
-    overflow: 'hidden',
-  },
-  inputSection: {
-    padding: ShowcaseSpacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: C.borderSubtle,
-    gap: 6,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: C.textTertiary,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  subjectInput: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: C.textPrimary,
-    height: 40,
-  },
-  msgInput: {
-    fontSize: 16,
-    color: C.textPrimary,
-    minHeight: 120,
-    textAlignVertical: 'top',
+    justifyContent: 'flex-end',
+    gap: 4,
     marginTop: 4,
   },
-  parityBox: {
-    marginTop: ShowcaseSpacing.xxl,
-    backgroundColor: C.accentLight,
-    borderRadius: ShowcaseRadius.lg,
-    padding: ShowcaseSpacing.lg,
-    borderWidth: 1,
-    borderColor: C.accentBorder,
+  timestamp: {
+    fontSize: 10,
+    color: '#888',
+    marginTop: 2,
   },
-  parityTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: C.accent,
-    marginBottom: ShowcaseSpacing.md,
-    textAlign: 'center',
+  accessoryWrapper: {
+    backgroundColor: 'transparent'
   },
-  parityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: ShowcaseSpacing.md,
-  },
-  parityItem: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 4,
-  },
-  parityCheck: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  parityPlatform: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: C.textPrimary,
-  },
-  parityEvent: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: C.textSecondary,
-    fontFamily: Platform.select({ ios: 'Menlo', default: 'monospace' }),
-  },
-  parityDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: C.accentBorder,
-  },
-  parityDesc: {
-    fontSize: 12,
-    color: C.textSecondary,
-    textAlign: 'center',
-    lineHeight: 18,
-    paddingHorizontal: 12,
-  },
-  comparisonNote: {
-    marginTop: ShowcaseSpacing.xl,
-    gap: 8,
-    paddingHorizontal: 8,
-  },
-  compNoteText: {
-    fontSize: 12,
-    color: C.textTertiary,
-    lineHeight: 18,
-  },
-  bold: {
-    fontWeight: '700',
-    color: C.textSecondary,
-  },
-  toolbar: {
-    height: 56,
-    backgroundColor: '#FFF',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: ShowcaseSpacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: C.border,
-    justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 8,
-  },
-  toolbarLeft: {
-    flexDirection: 'row',
-    gap: ShowcaseSpacing.lg,
-  },
-  toolBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  toolText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: C.accent,
-  },
-  sendBtn: {
-    paddingHorizontal: 16,
+  accessoryContainer: {
     paddingVertical: 8,
-    backgroundColor: C.accent,
-    borderRadius: 20,
+    paddingHorizontal: 10,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     gap: 8,
   },
-  sendBtnText: {
-    color: '#FFF',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  simpleButtonWrapper: {
-    padding: ShowcaseSpacing.lg,
+  inputContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#FFF',
-    borderTopWidth: 1,
-    borderTopColor: C.border,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    paddingHorizontal: 12,
+    minHeight: 48,
   },
-  fullWidthBtn: {
-    height: 50,
-    backgroundColor: C.accent,
-    borderRadius: 12,
+  input: {
+    flex: 1,
+    fontSize: 16,
+    paddingVertical: 8,
+    maxHeight: 100,
+  },
+  iconButton: {
+    padding: 4,
+  },
+  sendButton: {
+    backgroundColor: THEME.accent,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
+    elevation: 2,
   },
-  fullWidthBtnText: {
-    color: '#FFF',
-    fontSize: 16,
+  infoCard: {
+    margin: 12,
+    backgroundColor: '#E1F2E9',
+    borderRadius: 12,
+    padding: 15,
+    borderWidth: 1,
+    borderColor: '#A7D7C0',
+  },
+  infoTitle: {
+    fontSize: 14,
     fontWeight: '700',
+    color: THEME.accent,
+    marginBottom: 4,
+  },
+  infoText: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#4B5563',
   },
 });

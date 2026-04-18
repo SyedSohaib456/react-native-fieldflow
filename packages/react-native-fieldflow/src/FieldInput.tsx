@@ -1,4 +1,4 @@
-import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from 'react';
+import React, { forwardRef, useCallback, useEffect, useRef } from 'react';
 import type { NativeSyntheticEvent, TextInputSubmitEditingEventData } from 'react-native';
 import { Keyboard, TextInput } from 'react-native';
 
@@ -15,6 +15,11 @@ export const FieldInput = forwardRef<TextInput, FieldInputProps>((props, forward
     registerWithForm = true,
     blurOnSubmit: blurOnSubmitProp,
     skip,
+    // When true, this field is inside the keyboard accessory view (outside
+    // the ScrollView). We must skip scrollInputIntoView for these fields
+    // because the scroll responder cannot measure nodes outside its tree —
+    // which causes the "Error measuring text field" warning spam.
+    isAccessoryField = false,
     ...rest
   } = props;
 
@@ -74,16 +79,18 @@ export const FieldInput = forwardRef<TextInput, FieldInputProps>((props, forward
   const handleFocus = useCallback(
     (e: any) => {
       rest.onFocus?.(e);
-      if (ctx && internalRef.current && ctx.autoScroll) {
+      // Skip scrollInputIntoView for accessory fields — they live outside the
+      // ScrollView's node tree so the scroll responder cannot measure them,
+      // producing "Error measuring text field" warnings.
+      if (ctx && internalRef.current && ctx.autoScroll && !isAccessoryField) {
         ctx.scrollInputIntoView(internalRef.current);
       }
     },
-    [ctx, rest.onFocus],
+    [ctx, isAccessoryField, rest.onFocus],
   );
 
   return (
     <TextInput
-      // eslint-disable-next-line react/jsx-props-no-spreading -- TextInput passthrough
       {...rest}
       ref={internalRef}
       onFocus={handleFocus}

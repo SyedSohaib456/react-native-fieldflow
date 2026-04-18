@@ -20,8 +20,7 @@ import {
   ActionButton,
   FeatureCard,
   SectionLabel,
-  StatusPill,
-  StyledInput,
+  StyledInput
 } from '@/components/showcase';
 import {
   ShowcaseColors as C,
@@ -30,15 +29,13 @@ import {
 } from '@/constants/showcase-theme';
 import {
   FieldForm,
-  useKeyboardState,
-  type FieldFormHandle,
+  type FieldFormHandle
 } from '../../../packages/react-native-fieldflow/src';
 
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const formRef = useRef<FieldFormHandle>(null);
-  const { height: kbHeight, visible: kbVisible } = useKeyboardState();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -84,15 +81,15 @@ export default function HomeScreen() {
 
         {/* ── Demo Categories ──────────────────────── */}
         <View style={styles.section}>
-          <SectionLabel 
-            title="Core Basics" 
-            description="The essentials of FieldFlow: chaining and avoidance" 
+          <SectionLabel
+            title="Core Basics"
+            description="The essentials of FieldFlow: chaining and avoidance"
           />
           <View style={styles.navStack}>
             <FeatureCard
               icon="log-in-outline"
-              title="01. Login (Hello World)"
-              description="Simplest possible form — 2 fields, no config"
+              title="01. Login"
+              description="Simplest possible form with 2 fields, no config"
               onPress={() => router.push('/demos/01-login')}
             />
             <FeatureCard
@@ -110,16 +107,16 @@ export default function HomeScreen() {
             <FeatureCard
               icon="create-outline"
               title="04. Profile Edit"
-              description="nextRef override & two-column layout"
+              description="nextRef override & two column layout"
               onPress={() => router.push('/demos/04-profile')}
             />
           </View>
         </View>
 
         <View style={styles.section}>
-          <SectionLabel 
-            title="Hooks & Behavior" 
-            description="Lifting UI and responding to keyboard state" 
+          <SectionLabel
+            title="Hooks & Behavior"
+            description="Lifting UI and responding to keyboard state"
           />
           <View style={styles.navStack}>
             <FeatureCard
@@ -144,9 +141,9 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.section}>
-          <SectionLabel 
-            title="Advanced Layouts" 
-            description="Deep customisation and platform parity" 
+          <SectionLabel
+            title="Advanced Layouts"
+            description="Deep customisation and platform parity"
           />
           <View style={styles.navStack}>
             <FeatureCard
@@ -172,6 +169,12 @@ export default function HomeScreen() {
               title="11. Accessory View"
               description="Chat composer with accessory toolbar"
               onPress={() => router.push('/demos/11-accessory-view')}
+            />
+            <FeatureCard
+              icon="layers-outline"
+              title="12. Dynamic Forms"
+              description="Adding and removing fields on the fly"
+              onPress={() => router.push('/demos/12-dynamic-forms')}
             />
           </View>
         </View>

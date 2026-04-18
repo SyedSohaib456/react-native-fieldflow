@@ -8,6 +8,7 @@ import { ShowcaseColors as C } from '@/constants/showcase-theme';
  * and ensures proper Stack navigation registration.
  */
 export default function DemosLayout() {
+  return (
     <>
       <Stack
         screenOptions={{
@@ -23,7 +24,6 @@ export default function DemosLayout() {
           headerBackTitle: '', // Correct way to hide back title in native-stack
         }}
       >
-        {/* ... existing screens ... */}
         <Stack.Screen name="01-login" options={{ title: 'Login' }} />
         <Stack.Screen name="02-signup" options={{ title: 'Sign Up' }} />
         <Stack.Screen name="03-checkout" options={{ title: 'Checkout' }} />
@@ -38,4 +38,5 @@ export default function DemosLayout() {
       </Stack>
       <StatusBar style="dark" />
     </>
+  );
 }

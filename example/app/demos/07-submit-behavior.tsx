@@ -1,54 +1,76 @@
-import React, { useState, useCallback } from 'react';
-import { StyleSheet, Text, View, Switch, TouchableOpacity, Platform } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { 
-  FieldForm, 
-  FieldInput 
-} from '../../../packages/react-native-fieldflow/src';
-import { ShowcaseColors as C, ShowcaseSpacing, ShowcaseRadius } from '../../constants/showcase-theme';
+import { Stack, useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
+import { Alert, Platform, StyleSheet, Switch, Text, View } from 'react-native';
+import { FieldForm, FieldInput } from '../../../packages/react-native-fieldflow/src';
 import { ActionButton, IconButton } from '../../components/showcase';
+import { ShowcaseColors as C, ShowcaseRadius, ShowcaseSpacing } from '../../constants/showcase-theme';
 
 export default function SubmitBehaviorDemo() {
   const router = useRouter();
   const [autoSubmit, setAutoSubmit] = useState(false);
-  const [logs, setLogs] = useState<{ id: string, type: string, time: string }[]>([]);
+  const [logs, setLogs] = useState<{ id: string; type: string; time: string }[]>([]);
 
-  const handleFormSubmit = useCallback((type: 'button' | 'done-key') => {
-    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    setLogs(prev => [{ id: Math.random().toString(), type, time }, ...prev].slice(0, 5));
+  const addLog = useCallback((type: 'button' | 'done-key') => {
+    const time = new Date().toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+    setLogs((prev) => [{ id: Math.random().toString(36), type, time }, ...prev].slice(0, 5));
   }, []);
+
+  const handleSubmit = useCallback(() => {
+    addLog('done-key');
+  }, [addLog]);
+
+  const handleButtonSubmit = useCallback(() => {
+    addLog('button');
+  }, [addLog]);
+
+  // This will be called when user presses Done on last field
+  const handleLastFieldDone = useCallback(() => {
+    if (autoSubmit) {
+      handleSubmit();
+    } else {
+      Alert.alert(
+        "Manual Submission Required",
+        "Please tap the Submit button to submit the form.",
+        [{ text: "Got it" }]
+      );
+    }
+  }, [autoSubmit, handleSubmit]);
 
   return (
     <View style={styles.container}>
-      <Stack.Screen 
-        options={{ 
-          headerLeft: () => (
-            <IconButton 
-              icon="chevron-back" 
-              onPress={() => router.back()} 
-            />
-          ),
-        }} 
+      <Stack.Screen
+        options={{
+          headerLeft: () => <IconButton icon="chevron-back" onPress={() => router.back()} />,
+        }}
       />
 
+      {/* Toggle Control */}
       <View style={styles.controlPanel}>
         <View style={styles.switchRow}>
-            <View style={{ flex: 1 }}>
-                <Text style={styles.switchTitle}>Submit on Done key</Text>
-                <Text style={styles.switchSubtitle}>Automatically triggers onSubmit on last field.</Text>
-            </View>
-            <Switch 
-                value={autoSubmit} 
-                onValueChange={setAutoSubmit} 
-                trackColor={{ false: C.border, true: C.accent }}
-            />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.switchTitle}>Auto Submit on Last Field</Text>
+            <Text style={styles.switchSubtitle}>
+              {autoSubmit
+                ? 'Done key will submit the form automatically'
+                : 'Done key will show alert (manual submit required)'}
+            </Text>
+          </View>
+          <Switch
+            value={autoSubmit}
+            onValueChange={setAutoSubmit}
+            trackColor={{ false: C.border, true: C.accent }}
+          />
         </View>
       </View>
 
-      <FieldForm 
-        submitOnLastFieldDone={autoSubmit}
-        onSubmit={() => handleFormSubmit('done-key')}
+      <FieldForm
+        submitOnLastFieldDone={autoSubmit}   // Let the form handle auto-submit when enabled
+        onSubmit={handleSubmit}
         extraScrollPadding={100}
         keyboardVerticalOffset={0}
         scrollViewProps={{
@@ -57,59 +79,60 @@ export default function SubmitBehaviorDemo() {
         }}
       >
         <View style={styles.formContainer}>
-            <View style={styles.inputWrapper}>
-                <Text style={styles.label}>Full Name</Text>
-                <FieldInput placeholder="John Doe" style={styles.input} />
-            </View>
-            <View style={styles.inputWrapper}>
-                <Text style={styles.label}>Email Address</Text>
-                <FieldInput placeholder="john@example.com" keyboardType="email-address" style={styles.input} />
-            </View>
-            <View style={styles.inputWrapper}>
-                <Text style={styles.label}>Message</Text>
-                <FieldInput 
-                    placeholder="Tell us more..." 
-                    multiline 
-                    style={styles.multilineInput} 
-                    // Note: onFormSubmit on individual inputs overrides form-level behavior
-                    // but for this demo we're using the form-level submitOnLastFieldDone prop.
-                />
-            </View>
+          <View style={styles.inputWrapper}>
+            <Text style={styles.label}>Full Name</Text>
+            <FieldInput placeholder="John Doe" style={styles.input} returnKeyType="next" />
+          </View>
 
-            <ActionButton 
-                title="Submit form" 
-                onPress={() => handleFormSubmit('button')} 
-                style={styles.submitBtn}
+          <View style={styles.inputWrapper}>
+            <Text style={styles.label}>Email Address</Text>
+            <FieldInput
+              placeholder="john@example.com"
+              keyboardType="email-address"
+              style={styles.input}
+              returnKeyType="next"
             />
+          </View>
+
+          <View style={styles.inputWrapper}>
+            <Text style={styles.label}>Message</Text>
+            <FieldInput
+              placeholder="Tell us more..."
+              style={styles.multilineInput}
+              returnKeyType="done"
+              onSubmitEditing={handleLastFieldDone}   // Only on last field
+            />
+          </View>
+
+          <ActionButton
+            title="Submit Form"
+            onPress={handleButtonSubmit}
+            style={styles.submitBtn}
+          />
         </View>
 
+        {/* Logs */}
         <View style={styles.logSection}>
-            <Text style={styles.logTitle}>Submission Log</Text>
-            <View style={styles.logBox}>
-                {logs.length === 0 ? (
-                    <Text style={styles.emptyLog}>No submissions yet.</Text>
-                ) : (
-                    logs.map(log => (
-                        <View key={log.id} style={styles.logRow}>
-                            <Ionicons 
-                                name={log.type === 'done-key' ? 'keypad-outline' : 'send-outline'} 
-                                size={14} 
-                                color={C.accent} 
-                            />
-                            <Text style={styles.logTime}>{log.time}</Text>
-                            <Text style={styles.logDesc}>
-                                Submitted via <Text style={styles.bold}>{log.type === 'done-key' ? 'Done key' : 'Button tap'}</Text>
-                            </Text>
-                        </View>
-                    ))
-                )}
-            </View>
-        </View>
-
-        <View style={styles.usageNote}>
-            <Text style={styles.usageText}>
-                <Text style={styles.bold}>Pro Tip:</Text> Use <Text style={styles.monospace}>submitOnLastFieldDone</Text> to provide a seamless &quot;one-tap&quot; finish for short forms. For longer multiline fields, keep it disabled to avoid accidental submissions.
-            </Text>
+          <Text style={styles.logTitle}>Submission Log</Text>
+          <View style={styles.logBox}>
+            {logs.length === 0 ? (
+              <Text style={styles.emptyLog}>No submissions yet.</Text>
+            ) : (
+              logs.map((log) => (
+                <View key={log.id} style={styles.logRow}>
+                  <Ionicons
+                    name={log.type === 'done-key' ? 'keypad-outline' : 'send-outline'}
+                    size={16}
+                    color={C.accent}
+                  />
+                  <Text style={styles.logTime}>{log.time}</Text>
+                  <Text style={styles.logDesc}>
+                    Submitted via <Text style={styles.bold}>{log.type === 'done-key' ? 'Done Key' : 'Submit Button'}</Text>
+                  </Text>
+                </View>
+              ))
+            )}
+          </View>
         </View>
       </FieldForm>
     </View>
