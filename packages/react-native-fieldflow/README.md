@@ -20,7 +20,7 @@
 
 <br/>
 
-> ⭐ **If this saves you time, consider [starring the repo](https://github.com/SyedSohaib456/react-native-fieldflow) — it helps other developers find it.**
+⭐ **If this saves you time, consider [starring the repo](https://github.com/SyedSohaib456/react-native-fieldflow) — it helps other developers find it.**
 
 </div>
 
@@ -28,7 +28,7 @@
 
 ## 📱 Demo
 
-<div align="center">
+<div align="flex-start">
 <table>
 <tr>
 <td align="center"><b>Focus Chaining — iOS</b></td>
@@ -37,12 +37,16 @@
 <tr>
 <td align="center">
 
-https://github.com/SyedSohaib456/react-native-fieldflow/raw/main/media/mov/signupiOS.mp4
+<br/>
+<img src="https://raw.githubusercontent.com/SyedSohaib456/react-native-fieldflow/main/media/gif/signupiOS.gif" width="50%" alt="iOS Focus Chaining" />
+<br/>
 
 </td>
 <td align="center">
 
-https://github.com/SyedSohaib456/react-native-fieldflow/raw/main/media/mov/signupAndroid.mp4
+<br/>
+<img src="https://raw.githubusercontent.com/SyedSohaib456/react-native-fieldflow/main/media/gif/signupAndroid.gif" width="50%" alt="Android Focus Chaining" />
+<br/>
 
 </td>
 </tr>
@@ -53,12 +57,16 @@ https://github.com/SyedSohaib456/react-native-fieldflow/raw/main/media/mov/signu
 <tr>
 <td align="center">
 
-https://github.com/SyedSohaib456/react-native-fieldflow/raw/main/media/mov/accessoryiOS.mp4
+<br/>
+<img src="https://raw.githubusercontent.com/SyedSohaib456/react-native-fieldflow/main/media/gif/accessoryiOS.gif" width="250" alt="iOS Accessory View" />
+<br/>
 
 </td>
 <td align="center">
 
-https://github.com/SyedSohaib456/react-native-fieldflow/raw/main/media/mov/accessoryAndroid.mp4
+<br/>
+<img src="https://raw.githubusercontent.com/SyedSohaib456/react-native-fieldflow/main/media/gif/accessoryAndroid.gif" width="250" alt="Android Accessory View" />
+<br/>
 
 </td>
 </tr>
