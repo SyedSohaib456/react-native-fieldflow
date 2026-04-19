@@ -127,7 +127,7 @@ export default function SignUpScreen() {
 |                           |                                                                     |
 | ------------------------- | ------------------------------------------------------------------- |
 | 🔗 **Focus chaining**     | Fields 1–4 get `returnKeyType="next"`, the last field gets `"done"` |
-| ⌨️ **Keyboard avoidance** | Smooth 60fps layout shift via Reanimated worklet — no jumps         |
+| ⌨️ **Keyboard avoidance** | Smooth layout shift via Reanimated worklet — no jumps         |
 | 📜 **Auto scroll**        | Focused field is always scrolled into view above the keyboard       |
 | 📱 **Cross-platform**     | Identical behavior on iOS and Android, no `Platform.OS` switches    |
 
