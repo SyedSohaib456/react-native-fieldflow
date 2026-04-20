@@ -37,6 +37,12 @@
 </tr>
 </table>
 
+**🚧 Coming Soon**
+
+We’re working on adding **React Hook Form support** to make form handling, validation, and integration even smoother.
+
+Stay tuned!
+
 </div>
 
 ---
