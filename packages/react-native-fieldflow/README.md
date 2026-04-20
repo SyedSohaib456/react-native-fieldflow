@@ -127,7 +127,7 @@ export default function SignUpScreen() {
 |                           |                                                                     |
 | ------------------------- | ------------------------------------------------------------------- |
 | 🔗 **Focus chaining**     | Fields 1–4 get `returnKeyType="next"`, the last field gets `"done"` |
-| ⌨️ **Keyboard avoidance** | Smooth animated layout shift — no jumps, no native modules         |
+| ⌨️ **Keyboard avoidance** | Smooth animated layout shift — no jumps, no native modules          |
 | 🛠️ **Accessory views**    | Cross-platform floating toolbars, perfectly synced with animations  |
 | 📜 **Auto scroll**        | Focused field is always scrolled into view above the keyboard       |
 | 📱 **Cross-platform**     | Identical behavior on iOS and Android, no `Platform.OS` switches    |
@@ -220,55 +220,6 @@ import { FieldForm, FieldInput } from "react-native-fieldflow";
 | **Submit**            | The last field's Done button calls `onSubmit` and dismisses the keyboard                                                                           |
 
 > Everything runs in JS — no native modules required. Works on Expo, bare RN, and New Architecture (Fabric).
-
----
-
-## 📋 Using with React Hook Form
-
-`FieldInput` works as a drop-in inside RHF's `Controller`. Because we correctly forward refs, RHF's **focus-on-error** feature works automatically.
-
-```tsx
-import { useForm, Controller } from "react-hook-form";
-import { FieldForm, FieldInput } from "react-native-fieldflow";
-
-const { control, handleSubmit } = useForm();
-
-<FieldForm onSubmit={handleSubmit(onSubmit)}>
-  <Controller
-    control={control}
-    name="email"
-    rules={{ required: true }}
-    render={({ field: { onChange, onBlur, value, ref } }) => (
-      <FieldInput
-        ref={ref}           // 👈 Ref forwarded for validation focus
-        value={value}
-        onChangeText={onChange}
-        onBlur={onBlur}
-        placeholder="Email"
-      />
-    )}
-  />
-
-  <Controller
-    control={control}
-    name="password"
-    render={({ field: { onChange, onBlur, value, ref } }) => (
-      <FieldInput
-        ref={ref}
-        value={value}
-        onChangeText={onChange}
-        onBlur={onBlur}
-        placeholder="Password"
-        secureTextEntry
-      />
-    )}
-  />
-</FieldForm>
-```
-
-**Separation of Concerns:**
-- **FieldFlow owns:** Keyboard avoidance, focus chaining, scroll-to-field, automatic return keys, and accessory views.
-- **React Hook Form owns:** Field values, validation rules, error state, and form submission payload.
 
 ---
 
@@ -369,27 +320,12 @@ function HeaderSubmit() {
 }
 ```
 
-| Method         | Description                                                            |
-| -------------- | ---------------------------------------------------------------------- |
-| `focusFirst()` | Focuses the very first registered field in the form.                   |
-| `submit()`     | Triggers `onSubmit` and optionally dismisses the keyboard.             |
+| Method          | Description                                                            |
+| --------------- | ---------------------------------------------------------------------- |
+| `focusFirst()`  | Focuses the very first registered field in the form.                   |
+| `submit()`      | Triggers `onSubmit` and optionally dismisses the keyboard.             |
 | `scrollTo(ref)` | Manually scroll the form to keep a specific `Focusable` field visible. |
-| `dismiss()`    | Helper for `Keyboard.dismiss()`.                                       |
-
----
-
-## 🪟 Modals & Bottom Sheets
-
-When using `FieldForm` inside a `Modal` (especially on Android) or a bottom sheet library, you may need to adjust the avoidance offset.
-
-```tsx
-<FieldForm
-  // Offset varies by navigation header and modal type
-  keyboardVerticalOffset={(platform) => platform === 'ios' ? 44 : 0}
->
-  ...
-</FieldForm>
-```
+| `dismiss()`     | Helper for `Keyboard.dismiss()`.                                       |
 
 ---
 
@@ -523,6 +459,39 @@ const notesRef = useRef<TextInput>(null);
 Yes. FieldFlow uses `Animated`, `Keyboard`, and standard event listeners — all fully supported on both the old and new React Native architectures.
 
 </details>
+
+---
+
+## 🔌 Integrations
+
+### React Hook Form
+```tsx
+<FieldForm onSubmit={handleSubmit(onSubmit)}>
+  <Controller
+    control={control}
+    name="email"
+    render={({ field: { onChange, value, ref } }) => (
+      <FieldInput ref={ref} value={value} onChangeText={onChange} />
+    )}
+  />
+</FieldForm>
+```
+
+### Bottom Sheets & Custom ScrollViews
+Pass a custom scroller (e.g., Gorhom's `BottomSheetScrollView`) to the `ScrollViewComponent` prop.
+```tsx
+<FieldForm ScrollViewComponent={BottomSheetScrollView}>
+  <FieldInput placeholder="Automated chaining inside a bottom sheet!" />
+</FieldForm>
+```
+
+### Modals & Offset
+Adjust `keyboardVerticalOffset` for navigation headers or modal offsets.
+```tsx
+<FieldForm keyboardVerticalOffset={(p) => p === 'ios' ? 44 : 0}>
+  <FieldInput />
+</FieldForm>
+```
 
 ---
 

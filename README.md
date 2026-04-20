@@ -462,6 +462,39 @@ Yes. FieldFlow uses `Animated`, `Keyboard`, and standard event listeners — all
 
 ---
 
+## 🔌 Integrations
+
+### React Hook Form
+```tsx
+<FieldForm onSubmit={handleSubmit(onSubmit)}>
+  <Controller
+    control={control}
+    name="email"
+    render={({ field: { onChange, value, ref } }) => (
+      <FieldInput ref={ref} value={value} onChangeText={onChange} />
+    )}
+  />
+</FieldForm>
+```
+
+### Bottom Sheets & Custom ScrollViews
+Pass a custom scroller (e.g., Gorhom's `BottomSheetScrollView`) to the `ScrollViewComponent` prop.
+```tsx
+<FieldForm ScrollViewComponent={BottomSheetScrollView}>
+  <FieldInput placeholder="Automated chaining inside a bottom sheet!" />
+</FieldForm>
+```
+
+### Modals & Offset
+Adjust `keyboardVerticalOffset` for navigation headers or modal offsets.
+```tsx
+<FieldForm keyboardVerticalOffset={(p) => p === 'ios' ? 44 : 0}>
+  <FieldInput />
+</FieldForm>
+```
+
+---
+
 ## 🧪 Example App
 
 An Expo Router example app ships with **11 demo screens** covering real-world patterns:
