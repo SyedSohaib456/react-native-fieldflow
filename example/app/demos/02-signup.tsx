@@ -10,7 +10,7 @@ import { ShowcaseColors as C, ShowcaseRadius, ShowcaseSpacing } from '../../cons
 
 export default function SignupDemo() {
   const router = useRouter();
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(-1);
 
   const handleSubmit = () => {
     Alert.alert('Success', 'Sign up form submitted! Focus chain worked perfectly.');
@@ -52,6 +52,7 @@ export default function SignupDemo() {
       />
 
       <FieldForm
+        autofocusFirst
         onSubmit={handleSubmit}
         extraScrollPadding={140}
         keyboardVerticalOffset={0}

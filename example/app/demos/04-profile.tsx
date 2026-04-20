@@ -1,13 +1,13 @@
-import React, { useRef, forwardRef } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { 
-  FieldForm, 
-  FieldInput 
+import { Stack, useRouter } from 'expo-router';
+import React, { forwardRef, useRef } from 'react';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  FieldForm,
+  FieldInput
 } from '../../../packages/react-native-fieldflow/src';
-import { ShowcaseColors as C, ShowcaseSpacing, ShowcaseRadius } from '../../constants/showcase-theme';
 import { IconButton } from '../../components/showcase';
+import { ShowcaseColors as C, ShowcaseRadius, ShowcaseSpacing } from '../../constants/showcase-theme';
 
 /**
  * Reusable LabeledInput component using forwardRef.
@@ -17,7 +17,7 @@ import { IconButton } from '../../components/showcase';
 const LabeledInput = forwardRef<TextInput, any>(({ label, style, ...props }, ref) => (
   <View style={[styles.labeledInputWrapper, style]}>
     <Text style={styles.label}>{label}</Text>
-    <FieldInput 
+    <FieldInput
       ref={ref}
       style={styles.fieldInput}
       placeholderTextColor={C.textTertiary}
@@ -30,30 +30,31 @@ LabeledInput.displayName = 'LabeledInput';
 
 export default function ProfileDemo() {
   const router = useRouter();
-  
+
   // Create a ref for the Username field to demonstrate nextRef override.
   const usernameRef = useRef<TextInput>(null);
 
   return (
     <View style={styles.container}>
-      <Stack.Screen 
-        options={{ 
+      <Stack.Screen
+        options={{
           headerRight: () => (
             <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
               <Text style={styles.doneText}>Save</Text>
             </TouchableOpacity>
           ),
           headerLeft: () => (
-            <IconButton 
-              icon="close" 
-              onPress={() => router.back()} 
+            <IconButton
+              icon="close"
+              onPress={() => router.back()}
               color={C.textPrimary}
             />
           ),
-        }} 
+        }}
       />
 
-      <FieldForm 
+      <FieldForm
+        autofocusFirst
         extraScrollPadding={100}
         keyboardVerticalOffset={0}
         scrollViewProps={{
@@ -73,19 +74,19 @@ export default function ProfileDemo() {
 
         <View style={styles.section}>
           <View style={styles.row}>
-            <LabeledInput 
-              label="First Name" 
+            <LabeledInput
+              label="First Name"
               placeholder="Zuck"
               style={{ flex: 1 }}
               nextRef={usernameRef} // OVERRIDE: Focus Username after this field
             />
-            <LabeledInput 
-              label="Last Name" 
+            <LabeledInput
+              label="Last Name"
               placeholder="Berg"
               style={{ flex: 1 }}
             />
           </View>
-          
+
           <View style={styles.annotation}>
             <Ionicons name="git-branch-outline" size={14} color={C.accent} />
             <Text style={styles.annotationText}>
@@ -93,15 +94,15 @@ export default function ProfileDemo() {
             </Text>
           </View>
 
-          <LabeledInput 
+          <LabeledInput
             ref={usernameRef}
-            label="Username" 
+            label="Username"
             placeholder="zuck_official"
             autoCapitalize="none"
           />
 
-          <LabeledInput 
-            label="Bio" 
+          <LabeledInput
+            label="Bio"
             placeholder="Building the future..."
             multiline
             numberOfLines={3}
@@ -110,8 +111,8 @@ export default function ProfileDemo() {
           />
           <Text style={styles.bioNote}>Bio is skipped from focus chain for free typing.</Text>
 
-          <LabeledInput 
-            label="Website" 
+          <LabeledInput
+            label="Website"
             placeholder="https://meta.com"
             keyboardType="url"
             autoCapitalize="none"

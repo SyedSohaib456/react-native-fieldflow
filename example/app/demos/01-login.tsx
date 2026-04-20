@@ -29,6 +29,7 @@ export default function LoginDemo() {
       />
 
       <FieldForm
+        autofocusFirst
         onSubmit={handleSubmit}
         extraScrollPadding={140}
         keyboardVerticalOffset={0}

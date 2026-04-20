@@ -81,7 +81,7 @@
 npm install react-native-fieldflow
 ```
 
-> **Requirements:** React Native ≥ 0.68 · [`react-native-reanimated`](https://docs.swmansion.com/react-native-reanimated/) · Expo & bare RN supported · Zero native modules · No `pod install`
+> **Requirements:** React Native ≥ 0.68 · Expo & bare RN supported · Zero native modules · No `pod install`
 
 ---
 
@@ -127,7 +127,8 @@ export default function SignUpScreen() {
 |                           |                                                                     |
 | ------------------------- | ------------------------------------------------------------------- |
 | 🔗 **Focus chaining**     | Fields 1–4 get `returnKeyType="next"`, the last field gets `"done"` |
-| ⌨️ **Keyboard avoidance** | Smooth layout shift via Reanimated worklet — no jumps         |
+| ⌨️ **Keyboard avoidance** | Smooth animated layout shift — no jumps, no native modules         |
+| 🛠️ **Accessory views**    | Cross-platform floating toolbars, perfectly synced with animations  |
 | 📜 **Auto scroll**        | Focused field is always scrolled into view above the keyboard       |
 | 📱 **Cross-platform**     | Identical behavior on iOS and Android, no `Platform.OS` switches    |
 
@@ -213,12 +214,61 @@ import { FieldForm, FieldInput } from "react-native-fieldflow";
 
 | Layer                 | What happens                                                                                                                                       |
 | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Keyboard tracking** | `useAnimatedKeyboard()` runs on the UI thread via a C++ Reanimated worklet — zero JS bridge involvement during keyboard animation                  |
+| **Keyboard tracking** | Uses native keyboard listeners to track frame changes — zero native modules required                                                               |
 | **Spacer**            | An `Animated.View` at the bottom of the scroll content grows to match the keyboard frame, pushing content up in sync                               |
 | **Focus chain**       | Every `FieldInput` registers itself into an ordered list; tapping Next calls `focus()` on the next ref and scrolls it into view above the keyboard |
 | **Submit**            | The last field's Done button calls `onSubmit` and dismisses the keyboard                                                                           |
 
 > Everything runs in JS — no native modules required. Works on Expo, bare RN, and New Architecture (Fabric).
+
+---
+
+## 📋 Using with React Hook Form
+
+`FieldInput` works as a drop-in inside RHF's `Controller`. Because we correctly forward refs, RHF's **focus-on-error** feature works automatically.
+
+```tsx
+import { useForm, Controller } from "react-hook-form";
+import { FieldForm, FieldInput } from "react-native-fieldflow";
+
+const { control, handleSubmit } = useForm();
+
+<FieldForm onSubmit={handleSubmit(onSubmit)}>
+  <Controller
+    control={control}
+    name="email"
+    rules={{ required: true }}
+    render={({ field: { onChange, onBlur, value, ref } }) => (
+      <FieldInput
+        ref={ref}           // 👈 Ref forwarded for validation focus
+        value={value}
+        onChangeText={onChange}
+        onBlur={onBlur}
+        placeholder="Email"
+      />
+    )}
+  />
+
+  <Controller
+    control={control}
+    name="password"
+    render={({ field: { onChange, onBlur, value, ref } }) => (
+      <FieldInput
+        ref={ref}
+        value={value}
+        onChangeText={onChange}
+        onBlur={onBlur}
+        placeholder="Password"
+        secureTextEntry
+      />
+    )}
+  />
+</FieldForm>
+```
+
+**Separation of Concerns:**
+- **FieldFlow owns:** Keyboard avoidance, focus chaining, scroll-to-field, automatic return keys, and accessory views.
+- **React Hook Form owns:** Field values, validation rules, error state, and form submission payload.
 
 ---
 
@@ -246,6 +296,8 @@ The wrapper component that manages keyboard avoidance, scroll behavior, and the 
 | `keyboardVerticalOffset`    | `number \| (platform) => number` | `0 / 25`   | Static offset or per-platform resolver function                                                   |
 | `onKeyboardShow`            | `(payload) => void`              | —          | Fired when keyboard appears                                                                       |
 | `onKeyboardHide`            | `() => void`                     | —          | Fired when keyboard dismisses                                                                     |
+| `autofocusFirst`            | `boolean`                        | `false`    | Automatically focus the first field on mount (keyboard safe)                                      |
+| `autofocusDelay`            | `number`                         | `500`      | Delay in ms before autofocusing (waits for screen transitions)                                    |
 
 ---
 
@@ -256,7 +308,7 @@ A drop-in replacement for `TextInput`. Accepts **all** standard `TextInput` prop
 | Prop               | Type                   | Default | Description                                                                                    |
 | ------------------ | ---------------------- | ------- | ---------------------------------------------------------------------------------------------- |
 | `skip`             | `boolean`              | `false` | Exclude this field from the auto-focus chain                                                   |
-| `nextRef`          | `RefObject<TextInput>` | —       | Override: focus a specific ref instead of the next detected field                              |
+| `nextRef`          | `RefObject<Focusable>` | —       | Override: focus a specific ref instead of the next detected field                              |
 | `onFormSubmit`     | `() => void`           | —       | Override: called when this is the last field and Done is tapped                                |
 | `isAccessoryField` | `boolean`              | `false` | Set to `true` if this input lives inside `keyboardAccessoryView` to bypass scroll measurements |
 
@@ -303,20 +355,40 @@ const visible = useKeyboardVisible(); // boolean
 
 Both hooks use `keyboardWillShow` / `keyboardWillHide` on iOS and `keyboardDidShow` / `keyboardDidHide` on Android. No polling, no timers.
 
-**Example — a submit button that lifts above the keyboard:**
+### `useFieldFlowController`
+
+Exposes imperative actions to control the form from header buttons, tabs, or custom UI outside the field tree.
 
 ```tsx
-function SubmitButton() {
-  const height = useKeyboardHeight();
+import { useFieldFlowController } from "react-native-fieldflow";
 
-  return (
-    <Animated.View style={{ marginBottom: height }}>
-      <TouchableOpacity onPress={handleSubmit}>
-        <Text>Continue</Text>
-      </TouchableOpacity>
-    </Animated.View>
-  );
+function HeaderSubmit() {
+  const { submit, focusFirst } = useFieldFlowController();
+
+  return <Button title="Submit" onPress={submit} />;
 }
+```
+
+| Method         | Description                                                            |
+| -------------- | ---------------------------------------------------------------------- |
+| `focusFirst()` | Focuses the very first registered field in the form.                   |
+| `submit()`     | Triggers `onSubmit` and optionally dismisses the keyboard.             |
+| `scrollTo(ref)` | Manually scroll the form to keep a specific `Focusable` field visible. |
+| `dismiss()`    | Helper for `Keyboard.dismiss()`.                                       |
+
+---
+
+## 🪟 Modals & Bottom Sheets
+
+When using `FieldForm` inside a `Modal` (especially on Android) or a bottom sheet library, you may need to adjust the avoidance offset.
+
+```tsx
+<FieldForm
+  // Offset varies by navigation header and modal type
+  keyboardVerticalOffset={(platform) => platform === 'ios' ? 44 : 0}
+>
+  ...
+</FieldForm>
 ```
 
 ---

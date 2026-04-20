@@ -67,6 +67,7 @@ export default function ChatComposerDemo() {
       />
 
       <FieldForm
+        autofocusFirst
         keyboardAccessoryView={renderFullAccessory()}
         keyboardAccessoryViewMode="always"
         extraScrollPadding={20}

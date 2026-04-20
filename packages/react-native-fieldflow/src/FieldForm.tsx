@@ -21,8 +21,7 @@ import {
   StyleSheet,
   TouchableWithoutFeedback,
   View,
-  type ScrollViewProps,
-  type TextInput,
+  type ScrollViewProps
 } from 'react-native';
 
 import { FieldFlowContext } from './context';
@@ -30,10 +29,11 @@ import type {
   FieldFormContextValue,
   FieldFormHandle,
   FieldFormProps,
+  Focusable,
   KeyboardPlatformOs,
 } from './types';
 
-const defaultExtraScrollPadding = 50;
+const defaultExtraScrollPadding = 140;
 
 // If the keyboard height changes by less than this many pixels between two
 // consecutive show events (e.g. switching fields that triggers the autofill
@@ -88,6 +88,8 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
     keyboardAccessoryViewMode = 'always',
     scrollViewRef: scrollViewRefProp,
     resetScrollOnKeyboardHide = false,
+    autofocusFirst = false,
+    autofocusDelay = 500,
     // ── Chat mode ──────────────────────────────────────────────────────────
     // When true, the keyboard open animation uses a gentler easing so the
     // chat message list slides up smoothly rather than jumping. This matches
@@ -96,14 +98,18 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
     chatMode = false,
   } = props;
 
+  const nextIdRef = useRef(0);
   const fieldsRef = useRef<{
-    ref: React.MutableRefObject<TextInput | null>;
+    id: number;
+    ref: React.MutableRefObject<Focusable | null>;
     skip?: boolean;
     isAccessoryField?: boolean;
   }[]>([]);
   const internalScrollRef = useRef<ScrollView | null>(null);
   const [accessoryHeight, setAccessoryHeight] = React.useState(0);
   const [keyboardOpen, setKeyboardOpen] = React.useState(false);
+  const keyboardOpenRef = useRef(false);
+  const registryListenersRef = useRef<Set<() => void>>(new Set());
 
   const posRef = useRef<View | null>(null);
   const bottomOffsetRef = useRef(0);
@@ -134,54 +140,81 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
 
   // ── Field registry ────────────────────────────────────────────────────────
 
-  const register = useCallback((
-    inputRef: React.MutableRefObject<TextInput | null>,
-    skip?: boolean,
-    isAccessoryField?: boolean,
-  ): number => {
-    const fields = fieldsRef.current;
-    const existingIdx = fields.findIndex(f => f.ref === inputRef);
-    if (existingIdx === -1) {
-      fields.push({ ref: inputRef, skip, isAccessoryField });
-      return fields.length - 1;
-    }
-    return existingIdx;
+  const notifyQueuedRef = useRef(false);
+  const notifyRegistryChange = useCallback(() => {
+    if (notifyQueuedRef.current) return;
+    notifyQueuedRef.current = true;
+
+    // Use a microtask to batch multiple register/unregister calls (e.g. on mount)
+    // into a single notification. This avoids N^2 re-renders.
+    queueMicrotask(() => {
+      notifyQueuedRef.current = false;
+      registryListenersRef.current.forEach(fn => fn());
+    });
   }, []);
 
-  const unregister = useCallback((inputRef: React.MutableRefObject<TextInput | null>) => {
-    const fields = fieldsRef.current;
-    const idx = fields.findIndex(f => f.ref === inputRef);
-    if (idx > -1) fields.splice(idx, 1);
+  const subscribeRegistry = useCallback((fn: () => void) => {
+    registryListenersRef.current.add(fn);
+    return () => registryListenersRef.current.delete(fn);
   }, []);
+
+  const register = useCallback(
+    (
+      inputRef: React.MutableRefObject<Focusable | null>,
+      skip?: boolean,
+      isAccessoryField?: boolean,
+    ): number => {
+      const fields = fieldsRef.current;
+      const existing = fields.find(f => f.ref === inputRef);
+      if (existing) return existing.id;
+
+      const id = nextIdRef.current++;
+      fields.push({ id, ref: inputRef, skip, isAccessoryField });
+      notifyRegistryChange();
+      return id;
+    },
+    [notifyRegistryChange],
+  );
+
+  const unregister = useCallback(
+    (inputRef: React.MutableRefObject<Focusable | null>) => {
+      fieldsRef.current = fieldsRef.current.filter(f => f.ref !== inputRef);
+      notifyRegistryChange();
+    },
+    [notifyRegistryChange],
+  );
 
   const updateField = useCallback((
-    inputRef: React.MutableRefObject<TextInput | null>,
+    inputRef: React.MutableRefObject<Focusable | null>,
     skip?: boolean,
     isAccessoryField?: boolean,
   ) => {
     const fields = fieldsRef.current;
-    const idx = fields.findIndex(f => f.ref === inputRef);
-    if (idx > -1) {
-      fields[idx].skip = skip;
-      fields[idx].isAccessoryField = isAccessoryField;
+    const existing = fields.find(f => f.ref === inputRef);
+    if (existing) {
+      existing.skip = skip;
+      existing.isAccessoryField = isAccessoryField;
     }
   }, []);
 
   const count = useCallback(() => fieldsRef.current.length, []);
 
-  const hasNext = useCallback((currentIndex: number) => {
+  const hasNext = useCallback((currentId: number) => {
     const fields = fieldsRef.current;
-    for (let i = currentIndex + 1; i < fields.length; i++) {
+    const currentIdx = fields.findIndex(f => f.id === currentId);
+    if (currentIdx === -1) return false;
+
+    for (let i = currentIdx + 1; i < fields.length; i++) {
       if (!fields[i].skip) return true;
     }
     return false;
   }, []);
 
   const scrollInputIntoView = useCallback(
-    (input: TextInput | null, padding?: number) => {
+    (input: Focusable | null, padding?: number) => {
       const scroll = internalScrollRef.current;
       if (!scroll || !input) return;
-      const handle = findNodeHandle(input);
+      const handle = findNodeHandle(input as any);
       if (!handle) return;
       const pad = padding ?? (typeof extraScrollPadding === 'number' ? extraScrollPadding : 0);
       setTimeout(() => {
@@ -193,16 +226,30 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
     [extraScrollPadding],
   );
 
+  const focusFirst = useCallback(() => {
+    const fields = fieldsRef.current;
+    const first = fields.find(f => !f.skip);
+    if (first?.ref.current) {
+      first.ref.current.focus();
+      if (!first.isAccessoryField) {
+        scrollInputIntoView(first.ref.current);
+      }
+    }
+  }, [scrollInputIntoView]);
+
   const focusNext = useCallback(
-    (currentIndex: number) => {
+    (currentId: number) => {
       const fields = fieldsRef.current;
+      const currentIdx = fields.findIndex(f => f.id === currentId);
+
       let nextField: typeof fields[0] | null = null;
-      for (let i = currentIndex + 1; i < fields.length; i++) {
+      for (let i = currentIdx + 1; i < fields.length; i++) {
         if (!fields[i].skip) {
           nextField = fields[i];
           break;
         }
       }
+
       if (nextField?.ref.current) {
         nextField.ref.current.focus();
         // isAccessoryField = true means the field lives outside the ScrollView
@@ -228,11 +275,12 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
     ref,
     (): FieldFormHandle => ({
       focusNext,
+      focusFirst,
       scrollInputIntoView,
       dismissKeyboard: () => Keyboard.dismiss(),
       getScrollView: () => internalScrollRef.current,
     }),
-    [focusNext, scrollInputIntoView],
+    [focusNext, focusFirst, scrollInputIntoView],
   );
 
   useEffect(() => {
@@ -243,6 +291,14 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
     });
     return () => sub.remove();
   }, [androidDismissKeyboardOnBackPress]);
+
+  useEffect(() => {
+    if (!autofocusFirst) return undefined;
+    const timer = setTimeout(() => {
+      focusFirst();
+    }, autofocusDelay);
+    return () => clearTimeout(timer);
+  }, [autofocusFirst, autofocusDelay, focusFirst]);
 
   const animatedMargin = useRef(new Animated.Value(0)).current;
 
@@ -436,6 +492,7 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
 
     const showSub = Keyboard.addListener(showEvent, e => {
       setKeyboardOpen(true);
+      keyboardOpenRef.current = true;
       const h = e.endCoordinates.height;
       const offset = resolveKeyboardVerticalOffset(keyboardVerticalOffset);
       const finalHeight = Math.max(h + offset, 0);
@@ -478,6 +535,7 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
       onKeyboardShow?.({ height: h, event: e });
     });
     const hideSub = Keyboard.addListener(hideEvent, e => {
+      keyboardOpenRef.current = false;
       const hideDuration = e?.duration || 250;
       const hideEasing =
         Platform.OS === 'ios'
@@ -558,10 +616,13 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
       unregister,
       updateField,
       focusNext,
+      focusFirst,
       scrollInputIntoView,
       submitForm,
       count,
       hasNext,
+      isKeyboardOpen: () => keyboardOpenRef.current,
+      subscribeRegistry,
       autoScroll,
       chainEnabled,
       autoReturnKeyType,
@@ -572,10 +633,12 @@ export const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>((props, ref
       unregister,
       updateField,
       focusNext,
+      focusFirst,
       scrollInputIntoView,
       submitForm,
       count,
       hasNext,
+      subscribeRegistry,
       autoScroll,
       chainEnabled,
       autoReturnKeyType,

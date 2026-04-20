@@ -4,30 +4,41 @@ import type {
   NativeSyntheticEvent,
   ScrollView,
   ScrollViewProps,
-  TextInput,
   TextInputProps,
   TextInputSubmitEditingEventData,
 } from "react-native";
 
-/** Public context API for field registration and chained focus (used by `KeyboardInput`). */
+/** Anything that can be focused and blurred (e.g. TextInput, MaskedInput). */
+export interface Focusable {
+  focus(): void;
+  blur?(): void;
+}
+
+/** Public context API for field registration and chained focus. */
 export interface FieldFormContextValue {
   register: (
-    inputRef: MutableRefObject<TextInput | null>,
+    inputRef: MutableRefObject<Focusable | null>,
     skip?: boolean,
     isAccessoryField?: boolean,
   ) => number;
-  unregister: (inputRef: MutableRefObject<TextInput | null>) => void;
+  unregister: (inputRef: MutableRefObject<Focusable | null>) => void;
   updateField: (
-    inputRef: MutableRefObject<TextInput | null>,
+    inputRef: MutableRefObject<Focusable | null>,
     skip?: boolean,
     isAccessoryField?: boolean,
   ) => void;
-  focusNext: (currentIndex: number) => void;
+  focusNext: (currentId: number) => void;
+  /** Focuses the very first available field in the chain. */
+  focusFirst: () => void;
   /** Scrolls the form scroll view to ensure the given input is visible above the keyboard. */
-  scrollInputIntoView: (input: TextInput | null, padding?: number) => void;
+  scrollInputIntoView: (input: Focusable | null, padding?: number) => void;
   submitForm: () => void;
   count: () => number;
-  hasNext: (currentIndex: number) => boolean;
+  hasNext: (currentId: number) => boolean;
+  /** Returns true if the keyboard is currently open. Backed by a ref — no re-render. */
+  isKeyboardOpen: () => boolean;
+  /** Subscribe to mount/unmount events. Returns an unsubscribe function. */
+  subscribeRegistry: (callback: () => void) => () => void;
   /** @internal settings from FieldForm */
   autoScroll: boolean;
   chainEnabled: boolean;
@@ -37,12 +48,14 @@ export interface FieldFormContextValue {
 
 /** Imperative API when `KeyboardForm` is used with `ref`. */
 export interface FieldFormHandle {
-  /** Same as context `focusNext` — focuses the next registered field and scrolls if possible. */
-  focusNext: (currentIndex: number) => void;
-  /** Scrolls the form scroll view so the given input stays above the keyboard (no-op if not scrollable / no ref). */
-  scrollInputIntoView: (input: TextInput | null, padding?: number) => void;
+  /** Focuses the next registered field after the given ID. */
+  focusNext: (currentId: number) => void;
+  /** Focuses the very first available field in the form. */
+  focusFirst: () => void;
+  /** Scrolls the form so the given input stays above the keyboard. */
+  scrollInputIntoView: (input: Focusable | null, padding?: number) => void;
   dismissKeyboard: () => void;
-  /** Live ref to the scroll surface (internal or your `scrollViewRef`). */
+  /** Live ref to the scroll surface. */
   getScrollView: () => ScrollView | null;
 }
 
@@ -159,6 +172,18 @@ export interface FieldFormProps {
    * @default false
    */
   resetScrollOnKeyboardHide?: boolean;
+  /**
+   * If true, autofocuses the very first field in the form after mount.
+   * Useful for login/signup screens.
+   * @default false
+   */
+  autofocusFirst?: boolean;
+  /**
+   * Delay in ms before autofocusing the first field. Use to wait for
+   * screen navigation animations to finish.
+   * @default 500
+   */
+  autofocusDelay?: number;
 }
 
 export interface FieldInputProps extends TextInputProps {
@@ -167,7 +192,7 @@ export interface FieldInputProps extends TextInputProps {
   /** Runs before `ctx.submitForm()` when this is the last field and user submits. */
   onFormSubmit?: () => void;
   /** Jump here instead of the next registered field. */
-  nextRef?: MutableRefObject<TextInput | null>;
+  nextRef?: MutableRefObject<Focusable | null>;
   /** Set false to use `KeyboardInput` outside a `KeyboardForm`. @default true */
   registerWithForm?: boolean;
   /** Skip this field during standard keyboard "Next" navigation. @default false */

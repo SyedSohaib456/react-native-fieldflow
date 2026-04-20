@@ -15,6 +15,7 @@ export type {
   KeyboardPlatformOs,
   KeyboardVerticalOffsetResolver,
   UseKeyboardHeightOptions,
+  Focusable,
 } from './types';
 
 export { FieldFlowContext, useFieldFlow } from './context';
@@ -26,4 +27,5 @@ export {
   useKeyboardHeight,
   useKeyboardState,
   useKeyboardVisible,
+  useFieldFlowController,
 } from './hooks';

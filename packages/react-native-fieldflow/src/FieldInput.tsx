@@ -1,4 +1,4 @@
-import React, { forwardRef, useCallback, useEffect, useRef } from 'react';
+import React, { forwardRef, useCallback, useEffect, useReducer, useRef } from 'react';
 import type { NativeSyntheticEvent, TextInputSubmitEditingEventData } from 'react-native';
 import { Keyboard, TextInput } from 'react-native';
 
@@ -25,36 +25,58 @@ export const FieldInput = forwardRef<TextInput, FieldInputProps>((props, forward
 
   const internalRef = useRef<TextInput | null>(null);
 
+  const setRef = useCallback(
+    (node: TextInput | null) => {
+      internalRef.current = node;
+      if (typeof forwardedRef === 'function') {
+        forwardedRef(node);
+      } else if (forwardedRef) {
+        (forwardedRef as React.MutableRefObject<TextInput | null>).current = node;
+      }
+    },
+    [forwardedRef],
+  );
+
   const ctx = useFieldFlow();
-  const indexRef = useRef<number>(-1);
+  const [, forceUpdate] = useReducer((x) => x + 1, 0);
+  const idRef = useRef<number>(-1);
+
+  useEffect(() => {
+    if (ctx) {
+      return ctx.subscribeRegistry(forceUpdate);
+    }
+    return undefined;
+  }, [ctx]);
 
   useEffect(() => {
     if (!registerWithForm || !ctx) {
       return undefined;
     }
-    indexRef.current = ctx.register(internalRef, skip);
+    // Intentionally mount-only — skip and isAccessoryField changes are handled
+    // by the updateField effect below. Re-registering on prop change would shift
+    // the field's position in the chain.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    idRef.current = ctx.register(internalRef, skip, isAccessoryField);
     return () => ctx.unregister(internalRef);
-  }, [ctx, registerWithForm, skip]);
+  }, [ctx, registerWithForm]); // Mount-only registration
 
   useEffect(() => {
-    if (registerWithForm && ctx) {
-      ctx.updateField(internalRef, skip);
+    if (registerWithForm && ctx && idRef.current !== -1) {
+      ctx.updateField(internalRef, skip, isAccessoryField);
     }
-  }, [skip, ctx, registerWithForm]);
+  }, [skip, ctx, registerWithForm, isAccessoryField]);
 
   const isLast = useCallback((): boolean => {
-    if (!ctx) return true;
-    const idx = chainIndex ?? indexRef.current;
-    if (idx === -1) return true;
-    return !ctx.hasNext(idx);
-  }, [ctx, chainIndex]);
+    if (!ctx || idRef.current === -1) return true;
+    return !ctx.hasNext(idRef.current);
+  }, [ctx]);
 
   const handleSubmitEditing = useCallback(
     (e: NativeSyntheticEvent<TextInputSubmitEditingEventData>) => {
       onSubmitEditing?.(e);
-      if (!ctx) return;
+      if (!ctx || props.multiline || idRef.current === -1) return;
 
-      const idx = chainIndex ?? indexRef.current;
+      const id = idRef.current;
 
       if (nextRef?.current) {
         nextRef.current.focus();
@@ -66,14 +88,19 @@ export const FieldInput = forwardRef<TextInput, FieldInputProps>((props, forward
           Keyboard.dismiss();
         }
       } else if (ctx.chainEnabled) {
-        ctx.focusNext(idx);
+        ctx.focusNext(id);
       }
     },
-    [ctx, chainIndex, nextRef, isLast, onSubmitEditing, onFormSubmit],
+    [ctx, nextRef, isLast, onSubmitEditing, onFormSubmit, props.multiline],
   );
 
   const resolvedReturnKeyType =
-    returnKeyType ?? (ctx?.autoReturnKeyType ? (isLast() ? 'done' : 'next') : undefined);
+    returnKeyType ??
+    (ctx?.autoReturnKeyType && !props.multiline
+      ? isLast()
+        ? 'done'
+        : 'next'
+      : undefined);
   const blurOnSubmit = blurOnSubmitProp ?? false;
 
   const handleFocus = useCallback(
@@ -82,7 +109,13 @@ export const FieldInput = forwardRef<TextInput, FieldInputProps>((props, forward
       // Skip scrollInputIntoView for accessory fields — they live outside the
       // ScrollView's node tree so the scroll responder cannot measure them,
       // producing "Error measuring text field" warnings.
-      if (ctx && internalRef.current && ctx.autoScroll && !isAccessoryField) {
+      if (
+        ctx &&
+        internalRef.current &&
+        ctx.autoScroll &&
+        !isAccessoryField &&
+        ctx.isKeyboardOpen()
+      ) {
         ctx.scrollInputIntoView(internalRef.current);
       }
     },
@@ -92,7 +125,7 @@ export const FieldInput = forwardRef<TextInput, FieldInputProps>((props, forward
   return (
     <TextInput
       {...rest}
-      ref={internalRef}
+      ref={setRef}
       onFocus={handleFocus}
       blurOnSubmit={blurOnSubmit}
       returnKeyType={resolvedReturnKeyType}

@@ -1,7 +1,7 @@
 {
   "name": "react-native-fieldflow",
   "displayName": "FieldFlow",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "High-performance React Native keyboard avoidance and zero-config focus chaining. Now featuring Chat Mode for WhatsApp-style chat inputs and 120fps synchronized accessory views on both iOS and Android.",
   "main": "src/index.ts",
   "types": "src/index.ts",

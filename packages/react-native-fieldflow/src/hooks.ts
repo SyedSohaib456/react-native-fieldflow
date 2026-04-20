@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Keyboard, Platform } from 'react-native';
 
-import type { KeyboardHeightPayload, UseKeyboardHeightOptions } from './types';
+import { useFieldFlow } from './context';
+import type { Focusable, KeyboardHeightPayload, UseKeyboardHeightOptions } from './types';
 
 function defaultShowEvent(): 'keyboardWillShow' | 'keyboardDidShow' {
   return Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -55,6 +56,26 @@ export function useKeyboardState(options?: UseKeyboardHeightOptions): {
       visible: height > 0,
     }),
     [height],
+  );
+}
+
+/**
+ * Exposes imperative actions to control the form from outside the field tree.
+ */
+export function useFieldFlowController() {
+  const ctx = useFieldFlow();
+  return useMemo(
+    () => ({
+      /** Focuses the very first field in the chain. */
+      focusFirst: () => ctx?.focusFirst(),
+      /** Submits the form (calls `onSubmit` and optionally dismisses keyboard). */
+      submit: () => ctx?.submitForm(),
+      /** Manually scrolls the form to keep a specific field visible. */
+      scrollTo: (input: Focusable | null) => ctx?.scrollInputIntoView(input),
+      /** Standard Keyboard.dismiss() helper. */
+      dismiss: () => Keyboard.dismiss(),
+    }),
+    [ctx],
   );
 }
 
